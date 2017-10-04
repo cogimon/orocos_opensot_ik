@@ -1,0 +1,48 @@
+import("eigen_typekit")
+import("kdl_typekit")
+import("rst-rt_typekit")
+import("rtt_gazebo_embedded")
+require("os")
+
+loadComponent("gazebo","RTTGazeboEmbedded")
+
+setActivity("gazebo",0,10,ORO_SCHED_OTHER)
+
+gazebo.argv = strings("--verbose","-s /orocos/gnulinux/rtt_gazebo_system/librtt_gazebo_system.so")
+
+
+gazebo.configure()
+
+gazebo.start()
+
+gazebo.toggleDynamicsSimulation(false)
+
+gazebo.spawn_model("cogimon", "model://iit-cogimon", 20)
+
+import("rtt-gazebo-robot-sim")
+
+loadComponent("cogimon","cogimon::robotSim")
+setActivity("cogimon",0,11,ORO_SCHED_OTHER)
+
+var string urdf_path = os.getenv("ROBOTOLOGY_ROOT") + "/robots/cogimon-gazebo-models/iit-cogimon/model.urdf"
+var string srdf_path = os.getenv("ROBOTOLOGY_ROOT") + "/robots/cogimon-gazebo-models/iit-cogimon/cogimon.srdf"
+cogimon.loadURDFAndSRDF(urdf_path, srdf_path)
+cogimon.getModel("cogimon")
+cogimon.configure()
+
+var array ref = array(0.0, -0.15, 0.0, 0.3, -0.15, 0.0)
+cogimon.setInitialPosition("left_leg", ref)
+cogimon.setInitialPosition("right_leg", ref)
+
+gazebo.toggleDynamicsSimulation(true)
+
+## OROCOS_OPENSOT_IK
+import("orocos_opensot_ik")
+loadComponent("cogimon_orocos_opensot_ik","orocos_opensot_ik")
+
+addPeer("cogimon_orocos_opensot_ik", "cogimon")
+cogimon_orocos_opensot_ik.attachToRobot("cogimon")
+var string config_path = os.getenv("ROBOTOLOGY_ROOT") + "/configs/ADVR_shared/cogimon/configs/config_cogimon.yaml"
+cogimon_orocos_opensot_ik.loadConfig(config_path)
+cogimon_orocos_opensot_ik.configure()
+#cogimon_orocos_opensot_ik.start()
