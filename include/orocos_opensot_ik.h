@@ -13,6 +13,7 @@
 #include <XBotInterface/ModelInterface.h>
 
 #include <OpenSoT/tasks/velocity/CoM.h>
+#include <OpenSoT/tasks/velocity/AngularMomentum.h>
 #include <OpenSoT/tasks/velocity/Cartesian.h>
 #include <OpenSoT/constraints/velocity/JointLimits.h>
 #include <OpenSoT/constraints/velocity/VelocityLimits.h>
@@ -38,6 +39,7 @@ public:
         right_leg->setLambda(1.0);
         com.reset(new CoM(q, *model));
         com->setLambda(0.0);
+        angular_mom.reset(new AngularMomentum(q, *model));
 
         Eigen::VectorXd qmin, qmax;
         model->getJointLimits (qmin, qmax);
@@ -46,7 +48,7 @@ public:
         joint_vel_lims.reset(new VelocityLimits(2., dT, q.size()));
 
         stack = ((left_leg + right_leg)/
-                com)<<joint_lims<<joint_vel_lims;
+                  com)<<joint_lims<<joint_vel_lims;
 
         iHQP.reset(new QPOases_sot(stack->getStack(), stack->getBounds(), 1e10));
     }
@@ -54,6 +56,7 @@ public:
     Cartesian::Ptr left_leg;
     Cartesian::Ptr right_leg;
     CoM::Ptr com;
+    AngularMomentum::Ptr angular_mom;
 
     JointLimits::Ptr joint_lims;
     VelocityLimits::Ptr joint_vel_lims;
@@ -110,6 +113,7 @@ private:
     RTT::InputPort<sensor_msgs::Joy> _joystik_port;
     sensor_msgs::Joy joystik_msg;
 
+    Eigen::Vector6d centroidal_momentum;
     Eigen::Vector3d com_twist;
     Eigen::Vector3d zero3;
 };

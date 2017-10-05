@@ -30,6 +30,7 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
 
     zero3.setZero();
     com_twist.setZero();
+    centroidal_momentum.setZero(6);
 }
 
 bool orocos_opensot_ik::configureHook()
@@ -63,6 +64,7 @@ bool orocos_opensot_ik::startHook()
     sense(_q);
 
     _model->setJointPosition(_q);
+    _model->setJointVelocity(_dq);
     _model->update();
 
     ik.reset(new opensot_ik(_q, _model, this->getPeriod()));
@@ -86,7 +88,11 @@ void orocos_opensot_ik::updateHook()
         setReferences(joystik_msg);
 
     _model->setJointPosition(_q);
+    _model->setJointVelocity(_dq);
     _model->update();
+
+//    _model->getCentroidalMomentum(centroidal_momentum);
+//    ik->angular_mom->setReference(centroidal_momentum.segment(3,3));
 
     ik->stack->update(_q);
 
