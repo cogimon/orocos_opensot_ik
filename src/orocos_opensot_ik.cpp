@@ -52,7 +52,12 @@ bool orocos_opensot_ik::configureHook()
     return true;
 }
 
-
+void orocos_opensot_ik::setWorld(const KDL::Frame& l_sole_T_Waist, Eigen::VectorXd& q)
+{
+    _model->setFloatingBasePose(l_sole_T_Waist);
+    _model->update();
+    _model->getJointPosition(q);
+}
 
 bool orocos_opensot_ik::startHook()
 {
@@ -67,6 +72,15 @@ bool orocos_opensot_ik::startHook()
     _model->setJointVelocity(_dq);
     _model->update();
 
+    //Update world according this new configuration:
+    KDL::Frame l_sole_T_Waist;
+    _model->getPose("Waist", "l_sole", l_sole_T_Waist);
+
+    l_sole_T_Waist.p.x(0.0);
+    l_sole_T_Waist.p.y(0.0);
+
+    this->setWorld(l_sole_T_Waist, _q);
+
     ik.reset(new opensot_ik(_q, _model, this->getPeriod()));
 
     return true;
@@ -74,9 +88,9 @@ bool orocos_opensot_ik::startHook()
 
 void orocos_opensot_ik::setReferences(const sensor_msgs::Joy &msg)
 {
-    double scale = 1e-4;
-    com_twist[1] = scale*msg.axes[0];
-    com_twist[0] = scale*msg.axes[1];
+    double scale = 1e-3;
+    com_twist[1] = msg.axes[0];
+    com_twist[0] = msg.axes[1];
     com_twist[2] = scale*msg.axes[4];
     ik->com->setReference(zero3, com_twist);
 }
@@ -91,10 +105,12 @@ void orocos_opensot_ik::updateHook()
     _model->setJointVelocity(_dq);
     _model->update();
 
-//    _model->getCentroidalMomentum(centroidal_momentum);
-//    ik->angular_mom->setReference(centroidal_momentum.segment(3,3));
+    _model->getCentroidalMomentum(centroidal_momentum);
+    ik->angular_mom->setReference(centroidal_momentum.segment(3,3)*this->getPeriod());
 
     ik->stack->update(_q);
+    ik->com_z->update(_q);
+    ik->capture_point->update(_q);
 
     if(!ik->iHQP->solve(_dq)){
         _dq.setZero(_dq.size());

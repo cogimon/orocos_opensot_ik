@@ -17,6 +17,7 @@
 #include <OpenSoT/tasks/velocity/Cartesian.h>
 #include <OpenSoT/constraints/velocity/JointLimits.h>
 #include <OpenSoT/constraints/velocity/VelocityLimits.h>
+#include <OpenSoT/constraints/velocity/CapturePoint.h>
 #include <OpenSoT/utils/AutoStack.h>
 #include <OpenSoT/solvers/QPOases.h>
 
@@ -41,6 +42,21 @@ public:
         com->setLambda(0.0);
         angular_mom.reset(new AngularMomentum(q, *model));
 
+        Eigen::MatrixXd A(4,2);
+        A << Eigen::MatrixXd::Identity(2,2),
+             -1.*Eigen::MatrixXd::Identity(2,2);
+        Eigen::VectorXd b(4);
+        b<<0.03, 0.1, 0.1, 0.1;
+        capture_point.reset(new CapturePointConstraint(q, com, A, b, dT, 0.1));
+
+        Eigen::MatrixXd A2(2,3);
+        A2 << 0, 0,  1,
+              0, 0,  -1;
+        Eigen::VectorXd b2(2);
+        b2<< 0.51, -0.4;
+        com_z.reset(new CartesianPositionConstraint(q, com, A2, b2));
+        com->getConstraints().push_back(com_z);
+
         Eigen::VectorXd qmin, qmax;
         model->getJointLimits (qmin, qmax);
         joint_lims.reset(new JointLimits(q, qmax, qmin));
@@ -50,13 +66,15 @@ public:
         stack = ((left_leg + right_leg)/
                   com)<<joint_lims<<joint_vel_lims;
 
-        iHQP.reset(new QPOases_sot(stack->getStack(), stack->getBounds(), 1e10));
+        iHQP.reset(new QPOases_sot(stack->getStack(), stack->getBounds(),capture_point, 1e5));
     }
 
     Cartesian::Ptr left_leg;
     Cartesian::Ptr right_leg;
     CoM::Ptr com;
     AngularMomentum::Ptr angular_mom;
+    CapturePointConstraint::Ptr capture_point;
+    CartesianPositionConstraint::Ptr com_z;
 
     JointLimits::Ptr joint_lims;
     VelocityLimits::Ptr joint_vel_lims;
@@ -83,6 +101,7 @@ private:
     void sense(Eigen::VectorXd& q);
     void move(const Eigen::VectorXd& q);
     void setReferences(const sensor_msgs::Joy& msg);
+    void setWorld(const KDL::Frame& l_sole_T_Waist, Eigen::VectorXd& q);
 
     std::string _config_path;
     std::string _robot_name;
