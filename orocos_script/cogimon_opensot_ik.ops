@@ -37,7 +37,11 @@ cogimon.setInitialPosition("right_leg", ref)
 gazebo.toggleDynamicsSimulation(true)
 
 ## OROCOS_OPENSOT_IK
+import("rtt_ros")
+import("rtt_rosnode")
+import("rtt_sensor_msgs")
 import("orocos_opensot_ik")
+
 loadComponent("cogimon_orocos_opensot_ik","orocos_opensot_ik")
 
 addPeer("cogimon_orocos_opensot_ik", "cogimon")

@@ -7,6 +7,9 @@
 #include <rtt/Component.hpp>
 #include <rtt/Operation.hpp>
 #include <rtt/OperationCaller.hpp>
+#include <ros/ros.h>
+#include <rtt_rosclock/rtt_rosclock.h>
+#include <rtt_roscomm/rtt_rostopic.h>
 
 
 orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
@@ -24,6 +27,9 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
                 this, RTT::ClientThread);
     this->addOperation("attachToRobot", &orocos_opensot_ik::attachToRobot,
                 this, RTT::ClientThread);
+
+    zero3.setZero();
+    com_twist.setZero();
 }
 
 bool orocos_opensot_ik::configureHook()
@@ -40,11 +46,17 @@ bool orocos_opensot_ik::configureHook()
         return false;
     }
 
+    this->addPort(_joystik_port).doc("Joystik from ROS");
+
     return true;
 }
 
+
+
 bool orocos_opensot_ik::startHook()
 {
+    _joystik_port.createStream(rtt_roscomm::topic("joy"));
+
     _q.setZero(_model->getJointNum());
     _dq.setZero(_model->getJointNum());
 
@@ -58,8 +70,21 @@ bool orocos_opensot_ik::startHook()
     return true;
 }
 
+void orocos_opensot_ik::setReferences(const sensor_msgs::Joy &msg)
+{
+    double scale = 1e-4;
+    com_twist[1] = scale*msg.axes[0];
+    com_twist[0] = scale*msg.axes[1];
+    com_twist[2] = scale*msg.axes[4];
+    ik->com->setReference(zero3, com_twist);
+}
+
 void orocos_opensot_ik::updateHook()
 {
+    RTT::FlowStatus fs = _joystik_port.read(joystik_msg);
+    if(fs != 0)
+        setReferences(joystik_msg);
+
     _model->setJointPosition(_q);
     _model->update();
 

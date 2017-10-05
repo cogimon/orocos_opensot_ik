@@ -19,6 +19,8 @@
 #include <OpenSoT/utils/AutoStack.h>
 #include <OpenSoT/solvers/QPOases.h>
 
+#include <sensor_msgs/Joy.h>
+
 using namespace OpenSoT::tasks::velocity;
 using namespace OpenSoT::constraints::velocity;
 using namespace OpenSoT;
@@ -31,11 +33,11 @@ public:
                const double dT)
     {
         left_leg.reset(new Cartesian("left_leg", q, *model, "l_sole", "world"));
-        left_leg->setLambda(0.1);
+        left_leg->setLambda(1.0);
         right_leg.reset(new Cartesian("right_leg", q, *model, "r_sole", "world"));
-        right_leg->setLambda(0.1);
+        right_leg->setLambda(1.0);
         com.reset(new CoM(q, *model));
-        com->setLambda(0.1);
+        com->setLambda(0.0);
 
         Eigen::VectorXd qmin, qmax;
         model->getJointLimits (qmin, qmax);
@@ -77,6 +79,7 @@ private:
     bool attachToRobot(const std::string& robot_name);
     void sense(Eigen::VectorXd& q);
     void move(const Eigen::VectorXd& q);
+    void setReferences(const sensor_msgs::Joy& msg);
 
     std::string _config_path;
     std::string _robot_name;
@@ -103,6 +106,12 @@ private:
     std::map<std::string, rstrt::dynamics::Wrench> _frames_wrenches_map;
 
     boost::shared_ptr<opensot_ik> ik;
+
+    RTT::InputPort<sensor_msgs::Joy> _joystik_port;
+    sensor_msgs::Joy joystik_msg;
+
+    Eigen::Vector3d com_twist;
+    Eigen::Vector3d zero3;
 };
 
 #endif
