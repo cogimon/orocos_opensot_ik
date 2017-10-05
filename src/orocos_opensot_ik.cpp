@@ -8,6 +8,7 @@
 #include <rtt/Operation.hpp>
 #include <rtt/OperationCaller.hpp>
 
+
 orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
     RTT::TaskContext(name),
     _config_path(""),
@@ -17,7 +18,7 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
     _model_loaded(false),
     _ports_loaded(false)
 {
-    this->setActivity(new RTT::Activity(1, 0.1));
+    this->setActivity(new RTT::Activity(1, 0.001));
 
     this->addOperation("loadConfig", &orocos_opensot_ik::loadConfig,
                 this, RTT::ClientThread);
@@ -52,13 +53,25 @@ bool orocos_opensot_ik::startHook()
     _model->setJointPosition(_q);
     _model->update();
 
-    std::cout<<"q: "<<_q<<std::endl;
+    ik.reset(new opensot_ik(_q, _model, this->getPeriod()));
+
     return true;
 }
 
 void orocos_opensot_ik::updateHook()
 {
+    _model->setJointPosition(_q);
+    _model->update();
 
+    ik->stack->update(_q);
+
+    if(!ik->iHQP->solve(_dq)){
+        _dq.setZero(_dq.size());
+        std::cout<<"iHQP can not solve"<<std::endl;}
+
+    _q+=_dq;
+
+    move(_q);
 }
 
 void orocos_opensot_ik::stopHook()
@@ -107,6 +120,19 @@ bool orocos_opensot_ik::attachToRobot(const std::string &robot_name)
         rstrt::robot::JointState tmp(joint_names.size());
         _kinematic_chains_joint_state_map[kin_chain_name] = tmp;
         RTT::log(RTT::Info)<<"Added "<<kin_chain_name<<" port and data"<<RTT::endlog();
+
+        _kinematic_chains_output_ports[kin_chain_name] =
+                boost::shared_ptr<RTT::OutputPort<rstrt::kinematics::JointAngles> >(
+                            new RTT::OutputPort<rstrt::kinematics::JointAngles>(
+                                kin_chain_name+"_"+"JointPositionCtrl"));
+        this->addPort(*(_kinematic_chains_output_ports.at(kin_chain_name))).
+                doc(kin_chain_name+"_"+"JointPositionCtrl port");
+        _kinematic_chains_output_ports.at(kin_chain_name)->connectTo(
+                    task_ptr->ports()->getPort(kin_chain_name+"_"+"JointPositionCtrl"));
+
+
+        rstrt::kinematics::JointAngles tmp2(joint_names.size());
+        _kinematic_chains_desired_joint_state_map[kin_chain_name] = tmp2;
     }
 
 
@@ -145,6 +171,20 @@ void orocos_opensot_ik::sense(Eigen::VectorXd &q)
         for(unsigned int i = 0; i < it->second.size(); ++i)
             q[_model->getDofIndex(it->second.at(i))] =
                     _kinematic_chains_joint_state_map.at(it->first).angles[i];
+    }
+}
+
+void orocos_opensot_ik::move(const Eigen::VectorXd& q)
+{
+    std::map<std::string, std::vector<std::string> >::iterator it;
+    for(it = _map_kin_chains_joints.begin(); it != _map_kin_chains_joints.end(); it++)
+    {
+        for(unsigned int i = 0; i < it->second.size(); ++i)
+            _kinematic_chains_desired_joint_state_map.at(it->first).angles[i] =
+                    _q[_model->getDofIndex(it->second.at(i))];
+
+        _kinematic_chains_output_ports.at(it->first)->
+                write(_kinematic_chains_desired_joint_state_map.at(it->first));
     }
 }
 
