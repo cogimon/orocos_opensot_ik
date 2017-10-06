@@ -88,11 +88,10 @@ bool orocos_opensot_ik::startHook()
 
 void orocos_opensot_ik::setReferences(const sensor_msgs::Joy &msg)
 {
-    double scale = 1e-3;
     com_twist[1] = msg.axes[0];
     com_twist[0] = msg.axes[1];
-    com_twist[2] = scale*msg.axes[4];
-    ik->com->setReference(zero3, com_twist);
+    com_twist[2] = msg.axes[4];
+    ik->com->setReference(zero3, com_twist*this->getPeriod());
 }
 
 void orocos_opensot_ik::updateHook()
@@ -104,9 +103,6 @@ void orocos_opensot_ik::updateHook()
     _model->setJointPosition(_q);
     _model->setJointVelocity(_dq);
     _model->update();
-
-    _model->getCentroidalMomentum(centroidal_momentum);
-    ik->angular_mom->setReference(centroidal_momentum.segment(3,3)*this->getPeriod());
 
     ik->stack->update(_q);
     ik->com_z->update(_q);

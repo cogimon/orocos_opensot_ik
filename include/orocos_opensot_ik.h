@@ -13,7 +13,6 @@
 #include <XBotInterface/ModelInterface.h>
 
 #include <OpenSoT/tasks/velocity/CoM.h>
-#include <OpenSoT/tasks/velocity/AngularMomentum.h>
 #include <OpenSoT/tasks/velocity/Cartesian.h>
 #include <OpenSoT/constraints/velocity/JointLimits.h>
 #include <OpenSoT/constraints/velocity/VelocityLimits.h>
@@ -40,7 +39,6 @@ public:
         right_leg->setLambda(1.0);
         com.reset(new CoM(q, *model));
         com->setLambda(0.0);
-        angular_mom.reset(new AngularMomentum(q, *model));
 
         Eigen::MatrixXd A(4,2);
         A << Eigen::MatrixXd::Identity(2,2),
@@ -54,7 +52,7 @@ public:
               0, 0,  -1;
         Eigen::VectorXd b2(2);
         b2<< 0.51, -0.4;
-        com_z.reset(new CartesianPositionConstraint(q, com, A2, b2));
+        com_z.reset(new CartesianPositionConstraint(q, com, A2, b2, 0.1));
         com->getConstraints().push_back(com_z);
 
         Eigen::VectorXd qmin, qmax;
@@ -72,7 +70,6 @@ public:
     Cartesian::Ptr left_leg;
     Cartesian::Ptr right_leg;
     CoM::Ptr com;
-    AngularMomentum::Ptr angular_mom;
     CapturePointConstraint::Ptr capture_point;
     CartesianPositionConstraint::Ptr com_z;
 
