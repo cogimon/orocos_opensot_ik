@@ -19,7 +19,8 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
     _q(),
     _dq(),
     _model_loaded(false),
-    _ports_loaded(false)
+    _ports_loaded(false),
+    _v_max(0.05)
 {
     this->setActivity(new RTT::Activity(1, 0.001));
 
@@ -27,10 +28,17 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
                 this, RTT::ClientThread);
     this->addOperation("attachToRobot", &orocos_opensot_ik::attachToRobot,
                 this, RTT::ClientThread);
+    this->addOperation("setVMax", &orocos_opensot_ik::setVMax,
+                this, RTT::ClientThread);
 
     zero3.setZero();
     com_twist.setZero();
     centroidal_momentum.setZero(6);
+}
+
+void orocos_opensot_ik::setVMax(const double vmax)
+{
+    _v_max = vmax;
 }
 
 bool orocos_opensot_ik::configureHook()
@@ -48,6 +56,16 @@ bool orocos_opensot_ik::configureHook()
     }
 
     this->addPort(_joystik_port).doc("Joystik from ROS");
+
+    Eigen::Affine3d T;
+    _model->getPose("r_foot_upper_right_link", T);
+    std::cout<<"r_foot_upper_right_link: "<<T.translation()<<std::endl;
+    _model->getPose("r_foot_lower_right_link", T);
+    std::cout<<"r_foot_lower_right_link: "<<T.translation()<<std::endl;
+    _model->getPose("l_foot_upper_left_link", T);
+    std::cout<<"l_foot_upper_left_link: "<<T.translation()<<std::endl;
+    _model->getPose("l_foot_lower_left_link", T);
+    std::cout<<"l_foot_lower_left_link: "<<T.translation()<<std::endl;
 
     return true;
 }
@@ -88,9 +106,9 @@ bool orocos_opensot_ik::startHook()
 
 void orocos_opensot_ik::setReferences(const sensor_msgs::Joy &msg)
 {
-    com_twist[1] = msg.axes[0];
-    com_twist[0] = msg.axes[1];
-    com_twist[2] = msg.axes[4];
+    com_twist[1] = _v_max*msg.axes[0];
+    com_twist[0] = _v_max*msg.axes[1];
+    com_twist[2] = _v_max*msg.axes[4];
     ik->com->setReference(zero3, com_twist*this->getPeriod());
 }
 
@@ -103,6 +121,11 @@ void orocos_opensot_ik::updateHook()
     _model->setJointPosition(_q);
     _model->setJointVelocity(_dq);
     _model->update();
+
+//    Eigen::Vector6d L;
+//    _model->getCentroidalMomentum(L);
+//    ik->mom->setReference(this->getPeriod()*L.segment(3,3));
+
 
     ik->stack->update(_q);
     ik->com_z->update(_q);

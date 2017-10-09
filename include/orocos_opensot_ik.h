@@ -14,6 +14,7 @@
 
 #include <OpenSoT/tasks/velocity/CoM.h>
 #include <OpenSoT/tasks/velocity/Cartesian.h>
+#include <OpenSoT/tasks/velocity/AngularMomentum.h>
 #include <OpenSoT/constraints/velocity/JointLimits.h>
 #include <OpenSoT/constraints/velocity/VelocityLimits.h>
 #include <OpenSoT/constraints/velocity/CapturePoint.h>
@@ -40,12 +41,23 @@ public:
         com.reset(new CoM(q, *model));
         com->setLambda(0.0);
 
+        waist.reset(new Cartesian("waist", q, *model, "Waist", "world"));
+        waist->setLambda(0.0);
+        Eigen::MatrixXd W(6,6); W.setIdentity(6,6);
+        W(0,0) = 0.0; W(1,1) = 0.0; W(2,2) = 0.0;
+        waist->setWeight(W);
+
+        mom.reset(new AngularMomentum(q, *model));
+        Eigen::Vector6d L;
+        model->getCentroidalMomentum(L);
+        mom->setReference(dT*L.segment(3,3));
+
         Eigen::MatrixXd A(4,2);
         A << Eigen::MatrixXd::Identity(2,2),
              -1.*Eigen::MatrixXd::Identity(2,2);
         Eigen::VectorXd b(4);
         b<<0.03, 0.1, 0.1, 0.1;
-        capture_point.reset(new CapturePointConstraint(q, com, A, b, dT, 0.1));
+        capture_point.reset(new CapturePointConstraint(q, com, *model, A, b, dT,0.1));
 
         Eigen::MatrixXd A2(2,3);
         A2 << 0, 0,  1,
@@ -61,19 +73,23 @@ public:
         qmin[model->getDofIndex("LKneePitch")] = 0.3;
         joint_lims.reset(new JointLimits(q, qmax, qmin));
 
-        joint_vel_lims.reset(new VelocityLimits(2., dT, q.size()));
+        joint_vel_lims.reset(new VelocityLimits(3., dT, q.size()));
 
         stack = ((left_leg + right_leg)/
-                  com)<<joint_lims<<joint_vel_lims;
+                  com/
+                  waist)<<joint_lims<<joint_vel_lims;
 
         iHQP.reset(new QPOases_sot(stack->getStack(), stack->getBounds(),capture_point, 1e5));
     }
 
     Cartesian::Ptr left_leg;
     Cartesian::Ptr right_leg;
+    Cartesian::Ptr waist;
     CoM::Ptr com;
     CapturePointConstraint::Ptr capture_point;
     CartesianPositionConstraint::Ptr com_z;
+    AngularMomentum::Ptr mom;
+
 
     JointLimits::Ptr joint_lims;
     VelocityLimits::Ptr joint_vel_lims;
@@ -101,6 +117,7 @@ private:
     void move(const Eigen::VectorXd& q);
     void setReferences(const sensor_msgs::Joy& msg);
     void setWorld(const KDL::Frame& l_sole_T_Waist, Eigen::VectorXd& q);
+    void setVMax(const double vmax);
 
     std::string _config_path;
     std::string _robot_name;
@@ -134,6 +151,8 @@ private:
     Eigen::Vector6d centroidal_momentum;
     Eigen::Vector3d com_twist;
     Eigen::Vector3d zero3;
+
+    double _v_max;
 };
 
 #endif
