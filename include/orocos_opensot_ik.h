@@ -57,6 +57,8 @@ public:
 
         Eigen::VectorXd qmin, qmax;
         model->getJointLimits (qmin, qmax);
+        qmin[model->getDofIndex("RKneePitch")] = 0.3;
+        qmin[model->getDofIndex("LKneePitch")] = 0.3;
         joint_lims.reset(new JointLimits(q, qmax, qmin));
 
         joint_vel_lims.reset(new VelocityLimits(2., dT, q.size()));
