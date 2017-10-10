@@ -20,9 +20,10 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
     _dq(),
     _model_loaded(false),
     _ports_loaded(false),
-    _v_max(0.05)
+    _v_max(0.1),
+    Zero(4,4)
 {
-    this->setActivity(new RTT::Activity(1, 0.001));
+    this->setActivity(new RTT::Activity(1, 0.01));
 
     this->addOperation("loadConfig", &orocos_opensot_ik::loadConfig,
                 this, RTT::ClientThread);
@@ -32,7 +33,8 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
                 this, RTT::ClientThread);
 
     zero3.setZero();
-    com_twist.setZero();
+    Zero.setZero(4,4);
+    desired_twist.setZero();
     centroidal_momentum.setZero(6);
 }
 
@@ -57,15 +59,15 @@ bool orocos_opensot_ik::configureHook()
 
     this->addPort(_joystik_port).doc("Joystik from ROS");
 
-    Eigen::Affine3d T;
-    _model->getPose("r_foot_upper_right_link", T);
-    std::cout<<"r_foot_upper_right_link: "<<T.translation()<<std::endl;
-    _model->getPose("r_foot_lower_right_link", T);
-    std::cout<<"r_foot_lower_right_link: "<<T.translation()<<std::endl;
-    _model->getPose("l_foot_upper_left_link", T);
-    std::cout<<"l_foot_upper_left_link: "<<T.translation()<<std::endl;
-    _model->getPose("l_foot_lower_left_link", T);
-    std::cout<<"l_foot_lower_left_link: "<<T.translation()<<std::endl;
+//    Eigen::Affine3d T;
+//    _model->getPose("r_foot_upper_right_link", T);
+//    std::cout<<"r_foot_upper_right_link: "<<T.translation()<<std::endl;
+//    _model->getPose("r_foot_lower_right_link", T);
+//    std::cout<<"r_foot_lower_right_link: "<<T.translation()<<std::endl;
+//    _model->getPose("l_foot_upper_left_link", T);
+//    std::cout<<"l_foot_upper_left_link: "<<T.translation()<<std::endl;
+//    _model->getPose("l_foot_lower_left_link", T);
+//    std::cout<<"l_foot_lower_left_link: "<<T.translation()<<std::endl;
 
     return true;
 }
@@ -106,10 +108,10 @@ bool orocos_opensot_ik::startHook()
 
 void orocos_opensot_ik::setReferences(const sensor_msgs::Joy &msg)
 {
-    com_twist[1] = _v_max*msg.axes[0];
-    com_twist[0] = _v_max*msg.axes[1];
-    com_twist[2] = _v_max*msg.axes[4];
-    ik->com->setReference(zero3, com_twist*this->getPeriod());
+    desired_twist[1] = _v_max*msg.axes[0];
+    desired_twist[0] = _v_max*msg.axes[1];
+    desired_twist[2] = _v_max*msg.axes[4];
+    ik->waist->setReference(Zero, desired_twist*this->getPeriod());
 }
 
 void orocos_opensot_ik::updateHook()
@@ -125,6 +127,10 @@ void orocos_opensot_ik::updateHook()
 //    Eigen::Vector6d L;
 //    _model->getCentroidalMomentum(L);
 //    ik->mom->setReference(this->getPeriod()*L.segment(3,3));
+
+//    Eigen::Vector3d com;
+//    _model->getCOM(com);
+//    std::cout<<"com: ["<<com<<"]"<<std::endl;
 
 
     ik->stack->update(_q);

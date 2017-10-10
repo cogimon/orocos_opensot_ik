@@ -43,9 +43,6 @@ public:
 
         waist.reset(new Cartesian("waist", q, *model, "Waist", "world"));
         waist->setLambda(0.0);
-        Eigen::MatrixXd W(6,6); W.setIdentity(6,6);
-        W(0,0) = 0.0; W(1,1) = 0.0; W(2,2) = 0.0;
-        waist->setWeight(W);
 
         mom.reset(new AngularMomentum(q, *model));
         Eigen::Vector6d L;
@@ -58,6 +55,7 @@ public:
         Eigen::VectorXd b(4);
         b<<0.03, 0.1, 0.1, 0.1;
         capture_point.reset(new CapturePointConstraint(q, com, *model, A, b, dT,0.1));
+        capture_point->computeAngularMomentumCorrection(true);
 
         Eigen::MatrixXd A2(2,3);
         A2 << 0, 0,  1,
@@ -65,7 +63,7 @@ public:
         Eigen::VectorXd b2(2);
         b2<< 0.51, -0.4;
         com_z.reset(new CartesianPositionConstraint(q, com, A2, b2, 0.1));
-        com->getConstraints().push_back(com_z);
+        waist->getConstraints().push_back(com_z);
 
         Eigen::VectorXd qmin, qmax;
         model->getJointLimits (qmin, qmax);
@@ -76,7 +74,6 @@ public:
         joint_vel_lims.reset(new VelocityLimits(3., dT, q.size()));
 
         stack = ((left_leg + right_leg)/
-                  com/
                   waist)<<joint_lims<<joint_vel_lims;
 
         iHQP.reset(new QPOases_sot(stack->getStack(), stack->getBounds(),capture_point, 1e5));
@@ -149,8 +146,9 @@ private:
     sensor_msgs::Joy joystik_msg;
 
     Eigen::Vector6d centroidal_momentum;
-    Eigen::Vector3d com_twist;
+    Eigen::Vector6d desired_twist;
     Eigen::Vector3d zero3;
+    Eigen::MatrixXd Zero;
 
     double _v_max;
 };
