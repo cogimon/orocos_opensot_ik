@@ -20,6 +20,10 @@
 #include <OpenSoT/constraints/velocity/CapturePoint.h>
 #include <OpenSoT/utils/AutoStack.h>
 #include <OpenSoT/solvers/QPOases.h>
+#include <OpenSoT/SubTask.h>
+
+#include <mpcqp_walking/walker.h>
+#include <mpcqp_walking/integrator.h>
 
 #include <sensor_msgs/Joy.h>
 
@@ -35,14 +39,18 @@ public:
                const double dT)
     {
         left_leg.reset(new Cartesian("left_leg", q, *model, "l_sole", "world"));
-        left_leg->setLambda(1.0);
+        left_leg->setLambda(1.);
         right_leg.reset(new Cartesian("right_leg", q, *model, "r_sole", "world"));
-        right_leg->setLambda(1.0);
+        right_leg->setLambda(1.);
         com.reset(new CoM(q, *model));
-        com->setLambda(0.0);
+        com->setLambda(1.);
 
         waist.reset(new Cartesian("waist", q, *model, "Waist", "world"));
-        waist->setLambda(0.0);
+        waist->setLambda(1.);
+        SubTask::Ptr waist_orientation;
+        std::list<unsigned int> idx = {3,4,5};
+        waist_orientation.reset(new SubTask(waist,idx));
+        waist_orientation->setLambda(1.);
 
         mom.reset(new AngularMomentum(q, *model));
         Eigen::Vector6d L;
@@ -63,7 +71,7 @@ public:
         Eigen::VectorXd b2(2);
         b2<< 0.51, -0.4;
         com_z.reset(new CartesianPositionConstraint(q, com, A2, b2, 0.1));
-        waist->getConstraints().push_back(com_z);
+        //waist->getConstraints().push_back(com_z);
 
         Eigen::VectorXd qmin, qmax;
         model->getJointLimits (qmin, qmax);
@@ -71,12 +79,12 @@ public:
         qmin[model->getDofIndex("LKneePitch")] = 0.3;
         joint_lims.reset(new JointLimits(q, qmax, qmin));
 
-        joint_vel_lims.reset(new VelocityLimits(3., dT, q.size()));
+        joint_vel_lims.reset(new VelocityLimits(2., dT, q.size()));
 
-        stack = ((left_leg + right_leg)/
-                  waist)<<joint_lims<<joint_vel_lims;
+        stack = ((left_leg + right_leg)/(com)/waist_orientation)<<joint_lims<<joint_vel_lims;
 
-        iHQP.reset(new QPOases_sot(stack->getStack(), stack->getBounds(),capture_point, 1e5));
+//        iHQP.reset(new QPOases_sot(stack->getStack(), stack->getBounds(),capture_point, 1e5));
+        iHQP.reset(new QPOases_sot(stack->getStack(), stack->getBounds(), 1e9));
     }
 
     Cartesian::Ptr left_leg;
@@ -115,6 +123,8 @@ private:
     void setReferences(const sensor_msgs::Joy& msg);
     void setWorld(const KDL::Frame& l_sole_T_Waist, Eigen::VectorXd& q);
     void setVMax(const double vmax);
+    void setWalkingReferences(const legged_robot::AbstractVariable& next_state);
+    void logRobot(const XBot::ModelInterface::Ptr robot);
 
     std::string _config_path;
     std::string _robot_name;
@@ -150,7 +160,18 @@ private:
     Eigen::Vector3d zero3;
     Eigen::MatrixXd Zero;
 
+    Eigen::Affine3d tmp;
+    Eigen::Vector2d foot_size;
+
     double _v_max;
+
+    boost::shared_ptr<legged_robot::Walker> _wpg;
+    legged_robot::AbstractVariable next_state;
+    int update_counter;
+    int relative_activity;
+    legged_robot::Integrator integrator;
+
+    XBot::MatLogger::Ptr _logger;
 };
 
 #endif

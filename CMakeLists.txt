@@ -42,10 +42,12 @@ find_package(OpenSoT REQUIRED)
 find_package(orocos-ocl REQUIRED)
 find_package(XBotInterface REQUIRED)
 find_package(rtt_sensor_msgs REQUIRED)
+find_package(mpcqp_walking REQUIRED)
 
 message(STATUS "test ${orocos-ocl_LIBRARY_DIRS}")
 
-include_directories(${RTT-CORE-EXTENSIONS_INCLUDE_DIRS} ${OpenSoT_INCLUDE_DIRS} ${XBotInterface_INCLUDE_DIRS})
+include_directories(${RTT-CORE-EXTENSIONS_INCLUDE_DIRS}
+ ${mpcqp_walking_INCLUDE_DIRS} ${OpenSoT_INCLUDE_DIRS} ${XBotInterface_INCLUDE_DIRS})
 link_directories(${RTT-CORE-EXTENSIONS_LIBRARY_DIRS})
 
 
@@ -61,14 +63,16 @@ orocos_component(${CMAKE_PROJECT_NAME} ${PROJECT_SOURCE_DIR}/src/orocos_opensot_
 # target_link_libraries()
 if(OROCOS_TARGET STREQUAL "xenomai")
 	target_link_libraries(${CMAKE_PROJECT_NAME} ${RST-RT_LIBRARIES} ${RTT-CORE-EXTENSIONS_LIBRARIES} ${urdf_LIBRARIES}
-                      ${USE_OROCOS_LIBRARIES} ${OROCOS-RTT_LIBRARIES} ${OpenSoT_LIBRARIES}
+                      ${USE_OROCOS_LIBRARIES} ${OROCOS-RTT_LIBRARIES}
+                      ${mpcqp_walking_LIBRARIES} ${OpenSoT_LIBRARIES}
                       ${XBotInterface_LIBRARIES}
                       $ENV{ROBOTOLOGY_ROOT}/orocos_ws/install_isolated/lib/librtt_ros-xenomai.so
                       $ENV{ROBOTOLOGY_ROOT}/orocos_ws/install_isolated/lib/librtt_rosclock-xenomai.so
                       $ENV{ROBOTOLOGY_ROOT}/orocos_ws/install_isolated/lib/librtt_rostopic-xenomai.so)
 else()
 	target_link_libraries(${CMAKE_PROJECT_NAME} ${RST-RT_LIBRARIES} ${RTT-CORE-EXTENSIONS_LIBRARIES} ${urdf_LIBRARIES}
-                      ${USE_OROCOS_LIBRARIES} ${OROCOS-RTT_LIBRARIES} ${OpenSoT_LIBRARIES}
+                      ${USE_OROCOS_LIBRARIES} ${OROCOS-RTT_LIBRARIES}
+                      ${mpcqp_walking_LIBRARIES} ${OpenSoT_LIBRARIES}
                       ${XBotInterface_LIBRARIES} ${orocos-ocl_LIBRARY_DIRS}/librtt_rostopic-gnulinux.so
                       ${orocos-ocl_LIBRARY_DIRS}/librtt_rosclock-gnulinux.so)
 endif()

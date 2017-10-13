@@ -20,10 +20,12 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
     _dq(),
     _model_loaded(false),
     _ports_loaded(false),
-    _v_max(0.1),
+    _v_max(0.1), //0.05
     Zero(4,4)
 {
-    this->setActivity(new RTT::Activity(1, 0.01));
+    _logger = XBot::MatLogger::getLogger("/tmp/orocos_opensot_ik");
+
+    this->setActivity(new RTT::Activity(1, 0.002));
 
     this->addOperation("loadConfig", &orocos_opensot_ik::loadConfig,
                 this, RTT::ClientThread);
@@ -103,15 +105,89 @@ bool orocos_opensot_ik::startHook()
 
     ik.reset(new opensot_ik(_q, _model, this->getPeriod()));
 
+    foot_size<<0.2,0.1;
+    std::cout<<"foot_size: "<<foot_size<<std::endl;
+    relative_activity = 50;
+    std::cout<<"relative_activity: "<<relative_activity<<std::endl;
+    double __dT = this->getPeriod()*relative_activity;
+    std::cout<<"__dT: "<<__dT<<std::endl;
+    update_counter = 0;
+    _wpg.reset(new legged_robot::Walker(*_model, __dT, 2., 0.6, //1., 0.3
+                                        foot_size,
+                                        "l_sole", "r_sole", "Waist"));
+    _wpg->setStepHeight(0.08);
+    next_state = _wpg->getCurrentState();
+    integrator.set(_wpg->getCurrentState(), next_state, _wpg->getDuration(), this->getPeriod());
     return true;
 }
 
 void orocos_opensot_ik::setReferences(const sensor_msgs::Joy &msg)
 {
+    desired_twist.setZero();
+
     desired_twist[1] = _v_max*msg.axes[0];
     desired_twist[0] = _v_max*msg.axes[1];
     desired_twist[2] = _v_max*msg.axes[4];
-    ik->waist->setReference(Zero, desired_twist*this->getPeriod());
+    //ik->waist->setReference(Zero, desired_twist*this->getPeriod());
+    _wpg->setReference(desired_twist.segment(0,2));
+}
+
+void orocos_opensot_ik::setWalkingReferences(const legged_robot::AbstractVariable &next_state)
+{
+    Eigen::VectorXd desired_twist(6);
+    desired_twist.setZero(6);
+
+    Eigen::MatrixXd desired_pose(4,4);
+    desired_pose.setIdentity(4,4);
+
+    desired_twist[0] = next_state.lsole.vel[0];
+    desired_twist[1] = next_state.lsole.vel[1];
+    desired_twist[2] = next_state.lsole.vel[2];
+
+    desired_pose(0,3) = next_state.lsole.pos[0];
+    desired_pose(1,3) = next_state.lsole.pos[1];
+    desired_pose(2,3) = next_state.lsole.pos[2];
+
+    ik->left_leg->setReference(desired_pose, desired_twist*this->getPeriod());
+
+    desired_twist.setZero(6);
+    desired_pose.setIdentity(4,4);
+
+    desired_twist[0] = next_state.rsole.vel[0];
+    desired_twist[1] = next_state.rsole.vel[1];
+    desired_twist[2] = next_state.rsole.vel[2];
+
+    desired_pose(0,3) = next_state.rsole.pos[0];
+    desired_pose(1,3) = next_state.rsole.pos[1];
+    desired_pose(2,3) = next_state.rsole.pos[2];
+
+    ik->right_leg->setReference(desired_pose, desired_twist*this->getPeriod());
+
+    ik->com->setReference(next_state.com.pos, next_state.com.vel*this->getPeriod());
+}
+
+void orocos_opensot_ik::logRobot(const XBot::ModelInterface::Ptr robot)
+{
+    Eigen::Vector3d tmp;
+    robot->getCOMVelocity(tmp);
+    _logger->add("com_vel", tmp);
+
+    robot->getCOM(tmp);
+    _logger->add("com_pos", tmp);
+
+    Eigen::Affine3d tmp2;
+    robot->getPose("l_sole", tmp2);
+    _logger->add("lsole_pos", tmp2.matrix());
+
+    Eigen::Vector6d tmp3;
+    robot->getVelocityTwist("l_sole", tmp3);
+    _logger->add("lsole_vel", tmp3);
+
+    robot->getPose("r_sole", tmp2);
+    _logger->add("rsole_pos", tmp2.matrix());
+
+    robot->getVelocityTwist("r_sole", tmp3);
+    _logger->add("rsole_vel", tmp3);
 }
 
 void orocos_opensot_ik::updateHook()
@@ -121,8 +197,10 @@ void orocos_opensot_ik::updateHook()
         setReferences(joystik_msg);
 
     _model->setJointPosition(_q);
-    _model->setJointVelocity(_dq);
+    _model->setJointVelocity(_dq/this->getPeriod());
     _model->update();
+
+    logRobot(_model);
 
 //    Eigen::Vector6d L;
 //    _model->getCentroidalMomentum(L);
@@ -132,14 +210,39 @@ void orocos_opensot_ik::updateHook()
 //    _model->getCOM(com);
 //    std::cout<<"com: ["<<com<<"]"<<std::endl;
 
+    if(update_counter == relative_activity)
+    {
+        _wpg->setCurrentState(next_state);
 
+        update_counter = 0;
+
+        _wpg->solve(next_state);
+        _wpg->log(_logger, "wpg");
+        next_state.log(_logger, "next_state");
+
+        integrator.set(_wpg->getCurrentState(), next_state, _wpg->getDuration(), this->getPeriod());
+    }
+    else{
+        update_counter++;
+    }
+    integrator.Tick();
+    setWalkingReferences(integrator.Output());
+    integrator.Output().log(_logger, "integrator");
+
+
+    ik->waist->update(_q);
     ik->stack->update(_q);
-    ik->com_z->update(_q);
-    ik->capture_point->update(_q);
+    ik->stack->log(_logger);
+    //ik->com_z->update(_q);
+    //ik->capture_point->update(_q);
 
     if(!ik->iHQP->solve(_dq)){
         _dq.setZero(_dq.size());
         std::cout<<"iHQP can not solve"<<std::endl;}
+
+
+
+
 
     _q+=_dq;
 
