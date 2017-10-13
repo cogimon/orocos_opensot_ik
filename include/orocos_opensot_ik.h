@@ -25,6 +25,8 @@
 #include <mpcqp_walking/walker.h>
 #include <mpcqp_walking/integrator.h>
 
+#include <compliant_stabilizer/compliantstabilizer.h>
+
 #include <sensor_msgs/Joy.h>
 
 using namespace OpenSoT::tasks::velocity;
@@ -81,7 +83,7 @@ public:
 
         joint_vel_lims.reset(new VelocityLimits(2., dT, q.size()));
 
-        stack = ((left_leg + right_leg)/(com)/waist_orientation)<<joint_lims<<joint_vel_lims;
+        stack = ((left_leg + right_leg)/(com + waist_orientation))<<joint_lims<<joint_vel_lims;
 
 //        iHQP.reset(new QPOases_sot(stack->getStack(), stack->getBounds(),capture_point, 1e5));
         iHQP.reset(new QPOases_sot(stack->getStack(), stack->getBounds(), 1e8));
@@ -171,6 +173,8 @@ private:
     int update_counter;
     int relative_activity;
     legged_robot::Integrator integrator;
+
+    CompliantStabilizer stabilizer;
 
     XBot::MatLogger::Ptr _logger;
 };

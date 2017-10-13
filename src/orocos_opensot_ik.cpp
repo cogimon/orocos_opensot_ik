@@ -20,7 +20,7 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
     _dq(),
     _model_loaded(false),
     _ports_loaded(false),
-    _v_max(0.1), //0.05
+    _v_max(0.3), //0.05
     Zero(4,4)
 {
     _logger = XBot::MatLogger::getLogger("/tmp/orocos_opensot_ik");
@@ -106,14 +106,14 @@ bool orocos_opensot_ik::startHook()
 
     ik.reset(new opensot_ik(_q, _model, this->getPeriod()));
 
-    foot_size<<0.2,0.08;//0.2,0.1;
+    foot_size<<0.2,0.1;//0.2,0.1;
     std::cout<<"foot_size: "<<foot_size<<std::endl;
     relative_activity = 50;
     std::cout<<"relative_activity: "<<relative_activity<<std::endl;
     double __dT = this->getPeriod()*relative_activity;
     std::cout<<"__dT: "<<__dT<<std::endl;
     update_counter = 1;
-    _wpg.reset(new legged_robot::Walker(*_model, __dT, 1.5, 0.6, //1., 0.3
+    _wpg.reset(new legged_robot::Walker(*_model, __dT, 1.5, 0.6, //1.5, 0.6//1., 0.3
                                         foot_size,
                                         "l_sole", "r_sole", "Waist"));
     _wpg->setStepHeight(0.08);
@@ -127,7 +127,7 @@ void orocos_opensot_ik::setReferences(const sensor_msgs::Joy &msg)
 {
     desired_twist.setZero();
 
-    desired_twist[1] = _v_max*msg.axes[0];
+    desired_twist[1] = 1.5*_v_max*msg.axes[0];
     desired_twist[0] = _v_max*msg.axes[1];
     desired_twist[2] = _v_max*msg.axes[4];
     //ik->waist->setReference(Zero, desired_twist*this->getPeriod());
@@ -165,7 +165,21 @@ void orocos_opensot_ik::setWalkingReferences(const legged_robot::AbstractVariabl
 
     ik->right_leg->setReference(desired_pose, desired_twist*this->getPeriod());
 
-    ik->com->setReference(next_state.com.pos, next_state.com.vel*this->getPeriod());
+    Eigen::Vector2d CopPos_L, CopPos_R;
+    CopPos_L(0) = next_state.zmp[0] - next_state.lsole.pos[0];
+    CopPos_L(1) = next_state.zmp[1] - next_state.lsole.pos[1];
+
+    CopPos_R(0) = next_state.zmp[0] - next_state.rsole.pos[0];
+    CopPos_R(1) = next_state.zmp[1] - next_state.rsole.pos[1];
+
+
+    Eigen::VectorXd left_wrench(6);
+    left_wrench<<_frames_wrenches_map.at("l_leg_ft").forces.cast <double> (), _frames_wrenches_map.at("l_leg_ft").torques.cast <double> ();
+    Eigen::VectorXd right_wrench(6);
+    right_wrench<<_frames_wrenches_map.at("r_leg_ft").forces.cast <double> (), _frames_wrenches_map.at("r_leg_ft").torques.cast <double> ();
+    Eigen::Vector3d delta_com = stabilizer.update(left_wrench, right_wrench, CopPos_R, CopPos_L, next_state.lsole.pos, next_state.rsole.pos);
+
+    ik->com->setReference(next_state.com.pos + delta_com, next_state.com.vel*this->getPeriod());
 }
 
 void orocos_opensot_ik::logRobot(const XBot::ModelInterface::Ptr robot)
@@ -353,6 +367,13 @@ void orocos_opensot_ik::sense(Eigen::VectorXd &q)
         for(unsigned int i = 0; i < it->second.size(); ++i)
             q[_model->getDofIndex(it->second.at(i))] =
                     _kinematic_chains_joint_state_map.at(it->first).angles[i];
+    }
+
+    std::map<std::string, rstrt::dynamics::Wrench>::iterator it2;
+    for(it2 = _frames_wrenches_map.begin(); it2 != _frames_wrenches_map.end(); it2++)
+    {
+        RTT::FlowStatus fs = _frames_ports_map.at(it2->first)->read(
+                    _frames_wrenches_map.at(it2->first));
     }
 }
 
