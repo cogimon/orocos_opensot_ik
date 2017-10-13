@@ -84,7 +84,7 @@ public:
         stack = ((left_leg + right_leg)/(com)/waist_orientation)<<joint_lims<<joint_vel_lims;
 
 //        iHQP.reset(new QPOases_sot(stack->getStack(), stack->getBounds(),capture_point, 1e5));
-        iHQP.reset(new QPOases_sot(stack->getStack(), stack->getBounds(), 1e9));
+        iHQP.reset(new QPOases_sot(stack->getStack(), stack->getBounds(), 1e8));
     }
 
     Cartesian::Ptr left_leg;
@@ -135,6 +135,7 @@ private:
     bool _ports_loaded;
 
     Eigen::VectorXd _q;
+    Eigen::VectorXd _qm;
     Eigen::VectorXd _dq;
 
 

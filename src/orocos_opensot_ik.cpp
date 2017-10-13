@@ -89,6 +89,7 @@ bool orocos_opensot_ik::startHook()
     _dq.setZero(_model->getJointNum());
 
     sense(_q);
+    _qm = _q;
 
     _model->setJointPosition(_q);
     _model->setJointVelocity(_dq);
@@ -105,17 +106,18 @@ bool orocos_opensot_ik::startHook()
 
     ik.reset(new opensot_ik(_q, _model, this->getPeriod()));
 
-    foot_size<<0.2,0.1;
+    foot_size<<0.2,0.08;//0.2,0.1;
     std::cout<<"foot_size: "<<foot_size<<std::endl;
     relative_activity = 50;
     std::cout<<"relative_activity: "<<relative_activity<<std::endl;
     double __dT = this->getPeriod()*relative_activity;
     std::cout<<"__dT: "<<__dT<<std::endl;
-    update_counter = 0;
-    _wpg.reset(new legged_robot::Walker(*_model, __dT, 2., 0.6, //1., 0.3
+    update_counter = 1;
+    _wpg.reset(new legged_robot::Walker(*_model, __dT, 1.5, 0.6, //1., 0.3
                                         foot_size,
                                         "l_sole", "r_sole", "Waist"));
     _wpg->setStepHeight(0.08);
+    _wpg->setFootSpan(_wpg->getFootSpan()*0.8);
     next_state = _wpg->getCurrentState();
     integrator.set(_wpg->getCurrentState(), next_state, _wpg->getDuration(), this->getPeriod());
     return true;
@@ -192,6 +194,11 @@ void orocos_opensot_ik::logRobot(const XBot::ModelInterface::Ptr robot)
 
 void orocos_opensot_ik::updateHook()
 {
+    _logger->add("q", _q);
+    sense(_qm);
+    _logger->add("qm", _qm);
+
+
     RTT::FlowStatus fs = _joystik_port.read(joystik_msg);
     if(fs != 0)
         setReferences(joystik_msg);
@@ -214,7 +221,7 @@ void orocos_opensot_ik::updateHook()
     {
         _wpg->setCurrentState(next_state);
 
-        update_counter = 0;
+        update_counter = 1;
 
         _wpg->solve(next_state);
         _wpg->log(_logger, "wpg");
