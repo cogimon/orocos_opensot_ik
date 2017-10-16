@@ -20,7 +20,8 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
     _dq(),
     _model_loaded(false),
     _ports_loaded(false),
-    Zero(4,4)
+    Zero(4,4),
+    _step_height(0.08)
 {
     _logger = XBot::MatLogger::getLogger("/tmp/orocos_opensot_ik");
 
@@ -116,7 +117,7 @@ bool orocos_opensot_ik::startHook()
     _wpg.reset(new legged_robot::Walker(*_model, __dT, 1.5, 0.6, //1.5, 0.6//1., 0.3
                                         foot_size,
                                         "l_sole", "r_sole", "Waist"));
-    _wpg->setStepHeight(0.08);
+    _wpg->setStepHeight(_step_height);
     _wpg->setFootSpan(_wpg->getFootSpan()*0.8);
     next_state = _wpg->getCurrentState();
     integrator.set(_wpg->getCurrentState(), next_state, _wpg->getDuration(), this->getPeriod());
@@ -136,7 +137,8 @@ void orocos_opensot_ik::updateHook()
     if(fs != 0)
     {
         desired_twist.setZero();
-        joystick.getWalkingReferences(joystik_msg, desired_twist);
+        joystick.getWalkingReferences(joystik_msg, desired_twist, _step_height);
+        _wpg->setStepHeight(_step_height);
         _wpg->setReference(desired_twist.segment(0,2));
     }
 

@@ -16,13 +16,17 @@ public:
     void getWalkingVelMax(double& v_max_x, double& v_max_y);
 
     void getWalkingReferences(const sensor_msgs::Joy &msg,
-                              Eigen::Vector6d& desired_twist);
+                              Eigen::Vector6d& desired_twist,
+                              double& step_height_desired);
 
 
 private:
 
     double _walking_vmax_x;
     double _walking_vmax_y;
+
+    double _delta_step;
+
 
 };
 

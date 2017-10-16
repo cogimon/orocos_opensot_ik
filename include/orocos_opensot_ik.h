@@ -80,6 +80,8 @@ private:
 
     double _v_max;
 
+    double _step_height;
+
     boost::shared_ptr<legged_robot::Walker> _wpg;
     legged_robot::AbstractVariable next_state;
     int update_counter;
