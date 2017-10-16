@@ -20,7 +20,6 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
     _dq(),
     _model_loaded(false),
     _ports_loaded(false),
-    _v_max(0.3), //0.05
     Zero(4,4)
 {
     _logger = XBot::MatLogger::getLogger("/tmp/orocos_opensot_ik");
@@ -31,8 +30,8 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
                 this, RTT::ClientThread);
     this->addOperation("attachToRobot", &orocos_opensot_ik::attachToRobot,
                 this, RTT::ClientThread);
-    this->addOperation("setVMax", &orocos_opensot_ik::setVMax,
-                this, RTT::ClientThread);
+//    this->addOperation("setVMax", &orocos_opensot_ik::setVMax,
+//                this, RTT::ClientThread);
 
     zero3.setZero();
     Zero.setZero(4,4);
@@ -40,10 +39,6 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
     centroidal_momentum.setZero(6);
 }
 
-void orocos_opensot_ik::setVMax(const double vmax)
-{
-    _v_max = vmax;
-}
 
 bool orocos_opensot_ik::configureHook()
 {
@@ -121,17 +116,6 @@ bool orocos_opensot_ik::startHook()
     next_state = _wpg->getCurrentState();
     integrator.set(_wpg->getCurrentState(), next_state, _wpg->getDuration(), this->getPeriod());
     return true;
-}
-
-void orocos_opensot_ik::setReferences(const sensor_msgs::Joy &msg)
-{
-    desired_twist.setZero();
-
-    desired_twist[1] = 1.5*_v_max*msg.axes[0];
-    desired_twist[0] = _v_max*msg.axes[1];
-    desired_twist[2] = _v_max*msg.axes[4];
-    //ik->waist->setReference(Zero, desired_twist*this->getPeriod());
-    _wpg->setReference(desired_twist.segment(0,2));
 }
 
 void orocos_opensot_ik::setWalkingReferences(const legged_robot::AbstractVariable &next_state)
@@ -215,7 +199,11 @@ void orocos_opensot_ik::updateHook()
 
     RTT::FlowStatus fs = _joystik_port.read(joystik_msg);
     if(fs != 0)
-        setReferences(joystik_msg);
+    {
+        desired_twist.setZero();
+        joystick.setWalkingReferences(joystik_msg, desired_twist);
+        _wpg->setReference(desired_twist.segment(0,2));
+    }
 
     _model->setJointPosition(_q);
     _model->setJointVelocity(_dq/this->getPeriod());

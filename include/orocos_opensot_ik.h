@@ -17,9 +17,9 @@
 
 #include <compliant_stabilizer/compliantstabilizer.h>
 
-#include <sensor_msgs/Joy.h>
-
 #include <opensot_ik.h>
+
+#include <joystick_handler.h>
 
 class orocos_opensot_ik: public RTT::TaskContext {
 public:
@@ -38,7 +38,7 @@ private:
     void move(const Eigen::VectorXd& q);
     void setReferences(const sensor_msgs::Joy& msg);
     void setWorld(const KDL::Frame& l_sole_T_Waist, Eigen::VectorXd& q);
-    void setVMax(const double vmax);
+
     void setWalkingReferences(const legged_robot::AbstractVariable& next_state);
     void logRobot(const XBot::ModelInterface::Ptr robot);
 
@@ -71,6 +71,7 @@ private:
 
     RTT::InputPort<sensor_msgs::Joy> _joystik_port;
     sensor_msgs::Joy joystik_msg;
+    joystick_handler joystick;
 
     Eigen::Vector6d centroidal_momentum;
     Eigen::Vector6d desired_twist;

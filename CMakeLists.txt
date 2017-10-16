@@ -61,7 +61,8 @@ include(${OROCOS-RTT_USE_FILE_PATH}/UseOROCOS-RTT.cmake)
 # and installs in the directory lib/orocos/example/
 #
 orocos_component(${CMAKE_PROJECT_NAME} ${PROJECT_SOURCE_DIR}/src/orocos_opensot_ik.cpp
-                                       ${PROJECT_SOURCE_DIR}/src/opensot_ik.cpp)
+                                       ${PROJECT_SOURCE_DIR}/src/opensot_ik.cpp
+                                       ${PROJECT_SOURCE_DIR}/src/joystick_handler.cpp)
 # target_link_libraries()
 if(OROCOS_TARGET STREQUAL "xenomai")
 	target_link_libraries(${CMAKE_PROJECT_NAME} ${RST-RT_LIBRARIES} ${RTT-CORE-EXTENSIONS_LIBRARIES} ${urdf_LIBRARIES}
