@@ -61,6 +61,8 @@ include(${OROCOS-RTT_USE_FILE_PATH}/UseOROCOS-RTT.cmake)
 # and installs in the directory lib/orocos/example/
 #
 orocos_component(${CMAKE_PROJECT_NAME} ${PROJECT_SOURCE_DIR}/src/orocos_opensot_ik.cpp
+                                       ${PROJECT_SOURCE_DIR}/src/orocos_opensot_ik_operations.cpp
+                                       ${PROJECT_SOURCE_DIR}/src/orocos_opensot_ik_log.cpp
                                        ${PROJECT_SOURCE_DIR}/src/opensot_ik.cpp
                                        ${PROJECT_SOURCE_DIR}/src/joystick_handler.cpp)
 # target_link_libraries()

@@ -15,7 +15,7 @@ public:
 
     void getWalkingVelMax(double& v_max_x, double& v_max_y);
 
-    void setWalkingReferences(const sensor_msgs::Joy &msg,
+    void getWalkingReferences(const sensor_msgs::Joy &msg,
                               Eigen::Vector6d& desired_twist);
 
 

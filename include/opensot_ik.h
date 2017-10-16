@@ -10,6 +10,10 @@
 #include <OpenSoT/utils/AutoStack.h>
 #include <OpenSoT/solvers/QPOases.h>
 #include <OpenSoT/SubTask.h>
+#include <mpcqp_walking/walker.h>
+#include <rst-rt/dynamics/Wrench.hpp>
+
+#include <compliant_stabilizer/compliantstabilizer.h>
 
 using namespace OpenSoT::tasks::velocity;
 using namespace OpenSoT::constraints::velocity;
@@ -22,6 +26,9 @@ public:
     opensot_ik(const Eigen::VectorXd& q, const XBot::ModelInterface::Ptr model,
                const double dT);
 
+    void setWalkingReferences(const legged_robot::AbstractVariable &next_state,
+                              const std::map<std::string, rstrt::dynamics::Wrench> frames_wrenches_map);
+
     Cartesian::Ptr left_leg;
     Cartesian::Ptr right_leg;
     Cartesian::Ptr waist;
@@ -30,6 +37,7 @@ public:
     CartesianPositionConstraint::Ptr com_z;
     AngularMomentum::Ptr mom;
 
+    double _dT;
 
     JointLimits::Ptr joint_lims;
     VelocityLimits::Ptr joint_vel_lims;
@@ -38,6 +46,10 @@ public:
 
     QPOases_sot::Ptr iHQP;
 
+    Eigen::VectorXd desired_twist;
+    Eigen::MatrixXd desired_pose;
+
+    CompliantStabilizer stabilizer;
 };
 
 

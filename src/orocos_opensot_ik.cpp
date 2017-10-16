@@ -30,8 +30,6 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
                 this, RTT::ClientThread);
     this->addOperation("attachToRobot", &orocos_opensot_ik::attachToRobot,
                 this, RTT::ClientThread);
-//    this->addOperation("setVMax", &orocos_opensot_ik::setVMax,
-//                this, RTT::ClientThread);
 
     zero3.setZero();
     Zero.setZero(4,4);
@@ -118,77 +116,7 @@ bool orocos_opensot_ik::startHook()
     return true;
 }
 
-void orocos_opensot_ik::setWalkingReferences(const legged_robot::AbstractVariable &next_state)
-{
-    Eigen::VectorXd desired_twist(6);
-    desired_twist.setZero(6);
 
-    Eigen::MatrixXd desired_pose(4,4);
-    desired_pose.setIdentity(4,4);
-
-    desired_twist[0] = next_state.lsole.vel[0];
-    desired_twist[1] = next_state.lsole.vel[1];
-    desired_twist[2] = next_state.lsole.vel[2];
-
-    desired_pose(0,3) = next_state.lsole.pos[0];
-    desired_pose(1,3) = next_state.lsole.pos[1];
-    desired_pose(2,3) = next_state.lsole.pos[2];
-
-    ik->left_leg->setReference(desired_pose, desired_twist*this->getPeriod());
-
-    desired_twist.setZero(6);
-    desired_pose.setIdentity(4,4);
-
-    desired_twist[0] = next_state.rsole.vel[0];
-    desired_twist[1] = next_state.rsole.vel[1];
-    desired_twist[2] = next_state.rsole.vel[2];
-
-    desired_pose(0,3) = next_state.rsole.pos[0];
-    desired_pose(1,3) = next_state.rsole.pos[1];
-    desired_pose(2,3) = next_state.rsole.pos[2];
-
-    ik->right_leg->setReference(desired_pose, desired_twist*this->getPeriod());
-
-    Eigen::Vector2d CopPos_L, CopPos_R;
-    CopPos_L(0) = next_state.zmp[0] - next_state.lsole.pos[0];
-    CopPos_L(1) = next_state.zmp[1] - next_state.lsole.pos[1];
-
-    CopPos_R(0) = next_state.zmp[0] - next_state.rsole.pos[0];
-    CopPos_R(1) = next_state.zmp[1] - next_state.rsole.pos[1];
-
-
-    Eigen::VectorXd left_wrench(6);
-    left_wrench<<_frames_wrenches_map.at("l_leg_ft").forces.cast <double> (), _frames_wrenches_map.at("l_leg_ft").torques.cast <double> ();
-    Eigen::VectorXd right_wrench(6);
-    right_wrench<<_frames_wrenches_map.at("r_leg_ft").forces.cast <double> (), _frames_wrenches_map.at("r_leg_ft").torques.cast <double> ();
-    Eigen::Vector3d delta_com = stabilizer.update(left_wrench, right_wrench, CopPos_R, CopPos_L, next_state.lsole.pos, next_state.rsole.pos);
-
-    ik->com->setReference(next_state.com.pos + delta_com, next_state.com.vel*this->getPeriod());
-}
-
-void orocos_opensot_ik::logRobot(const XBot::ModelInterface::Ptr robot)
-{
-    Eigen::Vector3d tmp;
-    robot->getCOMVelocity(tmp);
-    _logger->add("com_vel", tmp);
-
-    robot->getCOM(tmp);
-    _logger->add("com_pos", tmp);
-
-    Eigen::Affine3d tmp2;
-    robot->getPose("l_sole", tmp2);
-    _logger->add("lsole_pos", tmp2.matrix());
-
-    Eigen::Vector6d tmp3;
-    robot->getVelocityTwist("l_sole", tmp3);
-    _logger->add("lsole_vel", tmp3);
-
-    robot->getPose("r_sole", tmp2);
-    _logger->add("rsole_pos", tmp2.matrix());
-
-    robot->getVelocityTwist("r_sole", tmp3);
-    _logger->add("rsole_vel", tmp3);
-}
 
 void orocos_opensot_ik::updateHook()
 {
@@ -201,7 +129,7 @@ void orocos_opensot_ik::updateHook()
     if(fs != 0)
     {
         desired_twist.setZero();
-        joystick.setWalkingReferences(joystik_msg, desired_twist);
+        joystick.getWalkingReferences(joystik_msg, desired_twist);
         _wpg->setReference(desired_twist.segment(0,2));
     }
 
@@ -235,7 +163,7 @@ void orocos_opensot_ik::updateHook()
         update_counter++;
     }
     integrator.Tick();
-    setWalkingReferences(integrator.Output());
+    ik->setWalkingReferences(integrator.Output(), _frames_wrenches_map);
     integrator.Output().log(_logger, "integrator");
 
 
@@ -248,9 +176,6 @@ void orocos_opensot_ik::updateHook()
     if(!ik->iHQP->solve(_dq)){
         _dq.setZero(_dq.size());
         std::cout<<"iHQP can not solve"<<std::endl;}
-
-
-
 
 
     _q+=_dq;
@@ -266,82 +191,6 @@ void orocos_opensot_ik::stopHook()
 void orocos_opensot_ik::cleanupHook()
 {
 
-}
-
-bool orocos_opensot_ik::attachToRobot(const std::string &robot_name)
-{
-    _robot_name = robot_name;
-    RTT::log(RTT::Info)<<"Robot name: "<<_robot_name<<RTT::endlog();
-
-    RTT::TaskContext* task_ptr = this->getPeer(robot_name);
-    if(!task_ptr){
-        RTT::log(RTT::Error)<<"Can not getPeer("<<robot_name<<")"<<RTT::endlog();
-        return false;}
-
-    RTT::log(RTT::Info)<<"Found Peer "<<robot_name<<RTT::endlog();
-
-    RTT::OperationCaller<std::map<std::string, std::vector<std::string> >(void) > getKinematicChainsAndJoints
-        = task_ptr->getOperation("getKinematicChainsAndJoints");
-
-    _map_kin_chains_joints = getKinematicChainsAndJoints();
-
-    std::map<std::string, std::vector<std::string> >::iterator it;
-    for(it = _map_kin_chains_joints.begin(); it != _map_kin_chains_joints.end(); it++)
-    {
-        std::string kin_chain_name = it->first;
-        std::vector<std::string> joint_names = it->second;
-
-        _kinematic_chains_feedback_ports[kin_chain_name] =
-            boost::shared_ptr<RTT::InputPort<rstrt::robot::JointState> >(
-                        new RTT::InputPort<rstrt::robot::JointState>(
-                            kin_chain_name+"_"+"JointFeedback"));
-        this->addPort(*(_kinematic_chains_feedback_ports.at(kin_chain_name))).
-                doc(kin_chain_name+"_"+"JointFeedback port");
-
-        _kinematic_chains_feedback_ports.at(kin_chain_name)->connectTo(
-                    task_ptr->ports()->getPort(kin_chain_name+"_"+"JointFeedback"));
-
-        rstrt::robot::JointState tmp(joint_names.size());
-        _kinematic_chains_joint_state_map[kin_chain_name] = tmp;
-        RTT::log(RTT::Info)<<"Added "<<kin_chain_name<<" port and data"<<RTT::endlog();
-
-        _kinematic_chains_output_ports[kin_chain_name] =
-                boost::shared_ptr<RTT::OutputPort<rstrt::kinematics::JointAngles> >(
-                            new RTT::OutputPort<rstrt::kinematics::JointAngles>(
-                                kin_chain_name+"_"+"JointPositionCtrl"));
-        this->addPort(*(_kinematic_chains_output_ports.at(kin_chain_name))).
-                doc(kin_chain_name+"_"+"JointPositionCtrl port");
-        _kinematic_chains_output_ports.at(kin_chain_name)->connectTo(
-                    task_ptr->ports()->getPort(kin_chain_name+"_"+"JointPositionCtrl"));
-
-
-        rstrt::kinematics::JointAngles tmp2(joint_names.size());
-        _kinematic_chains_desired_joint_state_map[kin_chain_name] = tmp2;
-    }
-
-
-    RTT::OperationCaller<std::vector<std::string> (void) > getForceTorqueSensorsFrames
-        = task_ptr->getOperation("getForceTorqueSensorsFrames");
-    std::vector<std::string> ft_sensors_frames = getForceTorqueSensorsFrames();
-    for(unsigned int i = 0; i < ft_sensors_frames.size(); ++i)
-    {
-        _frames_ports_map[ft_sensors_frames[i]] =
-                boost::shared_ptr<RTT::InputPort<rstrt::dynamics::Wrench> >(
-                    new RTT::InputPort<rstrt::dynamics::Wrench>(
-                        ft_sensors_frames[i]+"_SensorFeedback"));
-        this->addPort(*(_frames_ports_map.at(ft_sensors_frames[i]))).
-                doc(ft_sensors_frames[i]+"_SensorFeedback port");
-
-        _frames_ports_map.at(ft_sensors_frames[i])->connectTo(
-                    task_ptr->ports()->getPort(ft_sensors_frames[i]+"_SensorFeedback"));
-
-        rstrt::dynamics::Wrench tmp;
-        _frames_wrenches_map[ft_sensors_frames[i]] = tmp;
-
-        RTT::log(RTT::Info)<<"Added "<<ft_sensors_frames[i]<<" port and data"<<RTT::endlog();
-    }
-    _ports_loaded = true;
-    return true;
 }
 
 void orocos_opensot_ik::sense(Eigen::VectorXd &q)
@@ -379,13 +228,7 @@ void orocos_opensot_ik::move(const Eigen::VectorXd& q)
     }
 }
 
-bool orocos_opensot_ik::loadConfig(const std::string &config_path)
-{
-    _config_path = config_path;
-    _model = XBot::ModelInterface::getModel(_config_path);
-    _model_loaded = true;
-    return true;
-}
+
 
 ORO_CREATE_COMPONENT_LIBRARY()
 ORO_LIST_COMPONENT_TYPE(orocos_opensot_ik)

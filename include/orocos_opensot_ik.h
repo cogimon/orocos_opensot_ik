@@ -15,7 +15,6 @@
 #include <mpcqp_walking/walker.h>
 #include <mpcqp_walking/integrator.h>
 
-#include <compliant_stabilizer/compliantstabilizer.h>
 
 #include <opensot_ik.h>
 
@@ -38,8 +37,6 @@ private:
     void move(const Eigen::VectorXd& q);
     void setReferences(const sensor_msgs::Joy& msg);
     void setWorld(const KDL::Frame& l_sole_T_Waist, Eigen::VectorXd& q);
-
-    void setWalkingReferences(const legged_robot::AbstractVariable& next_state);
     void logRobot(const XBot::ModelInterface::Ptr robot);
 
     std::string _config_path;
@@ -89,7 +86,7 @@ private:
     int relative_activity;
     legged_robot::Integrator integrator;
 
-    CompliantStabilizer stabilizer;
+
 
     XBot::MatLogger::Ptr _logger;
 };

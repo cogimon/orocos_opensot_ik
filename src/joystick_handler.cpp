@@ -35,7 +35,7 @@ void joystick_handler::getWalkingVelMax(double &v_max_x, double &v_max_y)
     v_max_y = _walking_vmax_y;
 }
 
-void joystick_handler::setWalkingReferences(const sensor_msgs::Joy &msg,
+void joystick_handler::getWalkingReferences(const sensor_msgs::Joy &msg,
                                             Eigen::Vector6d& desired_twist)
 {
     desired_twist[1] = _walking_vmax_y*msg.axes[0];
