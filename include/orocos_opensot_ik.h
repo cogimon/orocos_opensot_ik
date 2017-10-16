@@ -35,14 +35,14 @@ public:
                const double dT)
     {
         left_leg.reset(new Cartesian("left_leg", q, *model, "l_sole", "world"));
-        left_leg->setLambda(1.0);
+        left_leg->setLambda(0.002);
         right_leg.reset(new Cartesian("right_leg", q, *model, "r_sole", "world"));
-        right_leg->setLambda(1.0);
+        right_leg->setLambda(0.002);
         com.reset(new CoM(q, *model));
-        com->setLambda(0.0);
+        com->setLambda(0.002);
 
         waist.reset(new Cartesian("waist", q, *model, "Waist", "world"));
-        waist->setLambda(0.0);
+        waist->setLambda(0.002);
 
         mom.reset(new AngularMomentum(q, *model));
         Eigen::Vector6d L;
@@ -53,7 +53,7 @@ public:
         A << Eigen::MatrixXd::Identity(2,2),
              -1.*Eigen::MatrixXd::Identity(2,2);
         Eigen::VectorXd b(4);
-        b<<0.03, 0.1, 0.1, 0.1;
+        b<<0.03, 0.09, 0.09, 0.09;
         capture_point.reset(new CapturePointConstraint(q, com, *model, A, b, dT,0.1));
         capture_point->computeAngularMomentumCorrection(true);
 

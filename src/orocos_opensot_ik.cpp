@@ -23,7 +23,7 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
     _v_max(0.1),
     Zero(4,4)
 {
-    this->setActivity(new RTT::Activity(1, 0.01));
+    this->setActivity(new RTT::Activity(1, 0.002));
 
     this->addOperation("loadConfig", &orocos_opensot_ik::loadConfig,
                 this, RTT::ClientThread);
@@ -68,6 +68,9 @@ bool orocos_opensot_ik::configureHook()
 //    std::cout<<"l_foot_upper_left_link: "<<T.translation()<<std::endl;
 //    _model->getPose("l_foot_lower_left_link", T);
 //    std::cout<<"l_foot_lower_left_link: "<<T.translation()<<std::endl;
+//    Eigen::Vector3d com;
+//    _model->getCOM(com);
+//    std::cout<<"com: "<<com<<std::endl;
 
     return true;
 }
@@ -111,7 +114,10 @@ void orocos_opensot_ik::setReferences(const sensor_msgs::Joy &msg)
     desired_twist[1] = _v_max*msg.axes[0];
     desired_twist[0] = _v_max*msg.axes[1];
     desired_twist[2] = _v_max*msg.axes[4];
-    ik->waist->setReference(Zero, desired_twist*this->getPeriod());
+
+
+
+    ik->waist->setReference(ik->waist->getReference(), desired_twist*this->getPeriod());
 }
 
 void orocos_opensot_ik::updateHook()
@@ -121,7 +127,7 @@ void orocos_opensot_ik::updateHook()
         setReferences(joystik_msg);
 
     _model->setJointPosition(_q);
-    _model->setJointVelocity(_dq);
+    _model->setJointVelocity(_dq/this->getPeriod());
     _model->update();
 
 //    Eigen::Vector6d L;
