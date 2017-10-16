@@ -97,10 +97,17 @@ bool orocos_opensot_ik::startHook()
 
     this->setWorld(l_sole_T_Waist, _q);
 
-    ik.reset(new opensot_ik(_q, _model, this->getPeriod()));
 
     foot_size<<0.2,0.1;//0.2,0.1;
     std::cout<<"foot_size: "<<foot_size<<std::endl;
+
+    Eigen::Affine3d tmp;
+    _model->getPose("l_ankle", "l_sole", tmp);
+
+    ik.reset(new opensot_ik(_q, _model, this->getPeriod(), fabs(tmp(2,3)), foot_size));
+
+
+
     relative_activity = 50;
     std::cout<<"relative_activity: "<<relative_activity<<std::endl;
     double __dT = this->getPeriod()*relative_activity;

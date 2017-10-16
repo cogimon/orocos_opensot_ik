@@ -2,11 +2,12 @@
 
 opensot_ik::opensot_ik(const Eigen::VectorXd &q,
                        const XBot::ModelInterface::Ptr model,
-                       const double dT):
+                       const double dT, const double ankle_height,
+                       const Eigen::Vector2d& foot_size):
     _dT(dT),
     desired_twist(6),
     desired_pose(4,4),
-    stabilizer(dT, model->getMass())
+    stabilizer(dT, model->getMass(), ankle_height, foot_size)
 {
     left_leg.reset(new Cartesian("left_leg", q, *model, "l_sole", "world"));
     left_leg->setLambda(1.);

@@ -24,7 +24,8 @@ class opensot_ik
 {
 public:
     opensot_ik(const Eigen::VectorXd& q, const XBot::ModelInterface::Ptr model,
-               const double dT);
+               const double dT, const double ankle_height,
+               const Eigen::Vector2d& foot_size);
 
     void setWalkingReferences(const legged_robot::AbstractVariable &next_state,
                               const std::map<std::string, rstrt::dynamics::Wrench> frames_wrenches_map);
