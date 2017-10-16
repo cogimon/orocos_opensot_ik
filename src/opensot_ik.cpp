@@ -5,7 +5,8 @@ opensot_ik::opensot_ik(const Eigen::VectorXd &q,
                        const double dT):
     _dT(dT),
     desired_twist(6),
-    desired_pose(4,4)
+    desired_pose(4,4),
+    stabilizer(dT, model->getMass())
 {
     left_leg.reset(new Cartesian("left_leg", q, *model, "l_sole", "world"));
     left_leg->setLambda(1.);
