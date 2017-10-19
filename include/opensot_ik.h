@@ -28,7 +28,7 @@ public:
                const Eigen::Vector2d& foot_size);
 
     void setWalkingReferences(const legged_robot::AbstractVariable &next_state,
-                              const std::map<std::string, rstrt::dynamics::Wrench> frames_wrenches_map);
+                              const std::map< std::string, XBot::ForceTorqueSensor::ConstPtr > frames_wrenches_map);
 
     Cartesian::Ptr left_leg;
     Cartesian::Ptr right_leg;

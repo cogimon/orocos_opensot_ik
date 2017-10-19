@@ -15,6 +15,7 @@
 #include <mpcqp_walking/walker.h>
 #include <mpcqp_walking/integrator.h>
 
+#include <XBotInterface/RobotInterface.h>
 
 #include <opensot_ik.h>
 
@@ -31,8 +32,7 @@ public:
     void cleanupHook();
 private:
 
-    bool loadConfig(const std::string& config_path);
-    bool attachToRobot(const std::string& robot_name);
+    bool attachToRobot(const std::string &robot_name, const std::string &config_path);
     void sense(Eigen::VectorXd& q);
     void move(const Eigen::VectorXd& q);
     void setReferences(const sensor_msgs::Joy& msg);
@@ -43,6 +43,7 @@ private:
     std::string _robot_name;
 
     XBot::ModelInterface::Ptr _model;
+    XBot::RobotInterface::Ptr _robot;
 
     bool _model_loaded;
     bool _ports_loaded;
@@ -50,19 +51,6 @@ private:
     Eigen::VectorXd _q;
     Eigen::VectorXd _qm;
     Eigen::VectorXd _dq;
-
-
-    std::map<std::string, std::vector<std::string> > _map_kin_chains_joints;
-    std::vector<std::string> _force_torque_sensors_frames;
-
-    std::map<std::string, boost::shared_ptr<RTT::InputPort<rstrt::robot::JointState> > > _kinematic_chains_feedback_ports;
-    std::map<std::string, rstrt::robot::JointState> _kinematic_chains_joint_state_map;
-
-    std::map<std::string, boost::shared_ptr<RTT::OutputPort<rstrt::kinematics::JointAngles> > > _kinematic_chains_output_ports;
-    std::map<std::string, rstrt::kinematics::JointAngles> _kinematic_chains_desired_joint_state_map;
-
-    std::map<std::string, boost::shared_ptr<RTT::InputPort<rstrt::dynamics::Wrench> > > _frames_ports_map;
-    std::map<std::string, rstrt::dynamics::Wrench> _frames_wrenches_map;
 
     boost::shared_ptr<opensot_ik> ik;
 

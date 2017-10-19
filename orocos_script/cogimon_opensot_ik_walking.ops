@@ -49,8 +49,7 @@ import("orocos_opensot_ik")
 loadComponent("cogimon_orocos_opensot_ik","orocos_opensot_ik")
 
 addPeer("cogimon_orocos_opensot_ik", "cogimon")
-cogimon_orocos_opensot_ik.attachToRobot("cogimon")
 var string config_path = os.getenv("ROBOTOLOGY_ROOT") + "/configs/ADVR_shared/cogimon/configs/config_cogimon.yaml"
-cogimon_orocos_opensot_ik.loadConfig(config_path)
+cogimon_orocos_opensot_ik.attachToRobot("cogimon", config_path)
 cogimon_orocos_opensot_ik.configure()
 #cogimon_orocos_opensot_ik.start()

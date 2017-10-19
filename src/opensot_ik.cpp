@@ -65,7 +65,7 @@ opensot_ik::opensot_ik(const Eigen::VectorXd &q,
 }
 
 void opensot_ik::setWalkingReferences(const legged_robot::AbstractVariable &next_state,
-                                      const std::map<std::string, rstrt::dynamics::Wrench> frames_wrenches_map)
+                                      const std::map< std::string, XBot::ForceTorqueSensor::ConstPtr > frames_wrenches_map)
 {
 
     desired_twist.setZero(6);
@@ -102,10 +102,10 @@ void opensot_ik::setWalkingReferences(const legged_robot::AbstractVariable &next
     CopPos_R(1) = next_state.zmp[1] - next_state.rsole.pos[1];
 
 
-    Eigen::VectorXd left_wrench(6);
-    left_wrench<<frames_wrenches_map.at("l_leg_ft").forces.cast <double> (), frames_wrenches_map.at("l_leg_ft").torques.cast <double> ();
-    Eigen::VectorXd right_wrench(6);
-    right_wrench<<frames_wrenches_map.at("r_leg_ft").forces.cast <double> (), frames_wrenches_map.at("r_leg_ft").torques.cast <double> ();
+    Eigen::Vector6d left_wrench;
+    frames_wrenches_map.at("l_leg_ft")->getWrench(left_wrench);
+    Eigen::Vector6d right_wrench;
+    frames_wrenches_map.at("r_leg_ft")->getWrench(right_wrench);
     Eigen::Vector3d delta_com = stabilizer.update(left_wrench, right_wrench, CopPos_R, CopPos_L, next_state.lsole.pos, next_state.rsole.pos);
 
     com->setReference(next_state.com.pos + delta_com, next_state.com.vel*_dT);

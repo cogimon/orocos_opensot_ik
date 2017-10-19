@@ -27,8 +27,6 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
 
     this->setActivity(new RTT::Activity(1, 0.002));
 
-    this->addOperation("loadConfig", &orocos_opensot_ik::loadConfig,
-                this, RTT::ClientThread);
     this->addOperation("attachToRobot", &orocos_opensot_ik::attachToRobot,
                 this, RTT::ClientThread);
 
@@ -36,36 +34,6 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
     Zero.setZero(4,4);
     desired_twist.setZero();
     centroidal_momentum.setZero(6);
-}
-
-
-bool orocos_opensot_ik::configureHook()
-{
-    if(!_model_loaded)
-    {
-        RTT::log(RTT::Info)<<"Model was not loaded! Call loadConfig(const std::string &config_path)"<<RTT::endlog();
-        return false;
-    }
-
-    if(!_ports_loaded)
-    {
-        RTT::log(RTT::Info)<<"Ports was not loaded! Call attachToRobot(const std::string &robot_name)"<<RTT::endlog();
-        return false;
-    }
-
-    this->addPort(_joystik_port).doc("Joystik from ROS");
-
-//    Eigen::Affine3d T;
-//    _model->getPose("r_foot_upper_right_link", T);
-//    std::cout<<"r_foot_upper_right_link: "<<T.translation()<<std::endl;
-//    _model->getPose("r_foot_lower_right_link", T);
-//    std::cout<<"r_foot_lower_right_link: "<<T.translation()<<std::endl;
-//    _model->getPose("l_foot_upper_left_link", T);
-//    std::cout<<"l_foot_upper_left_link: "<<T.translation()<<std::endl;
-//    _model->getPose("l_foot_lower_left_link", T);
-//    std::cout<<"l_foot_lower_left_link: "<<T.translation()<<std::endl;
-
-    return true;
 }
 
 void orocos_opensot_ik::setWorld(const KDL::Frame& l_sole_T_Waist, Eigen::VectorXd& q)
@@ -82,8 +50,14 @@ bool orocos_opensot_ik::startHook()
     _q.setZero(_model->getJointNum());
     _dq.setZero(_model->getJointNum());
 
-    sense(_q);
-    _qm = _q;
+    _qm.setZero(_robot->getJointNum());
+
+    std::cout<<"_qm: "<<_qm<<std::endl;
+
+    sense(_qm);
+    _q.segment(6,_qm.size()) = _qm;
+
+    std::cout<<"_q: "<<_q<<std::endl;
 
     _model->setJointPosition(_q);
     _model->setJointVelocity(_dq);
@@ -172,7 +146,7 @@ void orocos_opensot_ik::updateHook()
         update_counter++;
     }
     integrator.Tick();
-    ik->setWalkingReferences(integrator.Output(), _frames_wrenches_map);
+    ik->setWalkingReferences(integrator.Output(), _robot->getForceTorque());
     integrator.Output().log(_logger, "integrator");
 
 
@@ -189,7 +163,7 @@ void orocos_opensot_ik::updateHook()
 
     _q+=_dq;
 
-    move(_q);
+    move(_q.segment(6,_qm.size()));
 }
 
 void orocos_opensot_ik::stopHook()
@@ -201,42 +175,6 @@ void orocos_opensot_ik::cleanupHook()
 {
 
 }
-
-void orocos_opensot_ik::sense(Eigen::VectorXd &q)
-{
-    std::map<std::string, std::vector<std::string> >::iterator it;
-    for(it = _map_kin_chains_joints.begin(); it != _map_kin_chains_joints.end(); it++)
-    {
-        RTT::FlowStatus fs = _kinematic_chains_feedback_ports.at(it->first)->read(
-                    _kinematic_chains_joint_state_map.at(it->first));
-
-        for(unsigned int i = 0; i < it->second.size(); ++i)
-            q[_model->getDofIndex(it->second.at(i))] =
-                    _kinematic_chains_joint_state_map.at(it->first).angles[i];
-    }
-
-    std::map<std::string, rstrt::dynamics::Wrench>::iterator it2;
-    for(it2 = _frames_wrenches_map.begin(); it2 != _frames_wrenches_map.end(); it2++)
-    {
-        RTT::FlowStatus fs = _frames_ports_map.at(it2->first)->read(
-                    _frames_wrenches_map.at(it2->first));
-    }
-}
-
-void orocos_opensot_ik::move(const Eigen::VectorXd& q)
-{
-    std::map<std::string, std::vector<std::string> >::iterator it;
-    for(it = _map_kin_chains_joints.begin(); it != _map_kin_chains_joints.end(); it++)
-    {
-        for(unsigned int i = 0; i < it->second.size(); ++i)
-            _kinematic_chains_desired_joint_state_map.at(it->first).angles[i] =
-                    _q[_model->getDofIndex(it->second.at(i))];
-
-        _kinematic_chains_output_ports.at(it->first)->
-                write(_kinematic_chains_desired_joint_state_map.at(it->first));
-    }
-}
-
 
 
 ORO_CREATE_COMPONENT_LIBRARY()
