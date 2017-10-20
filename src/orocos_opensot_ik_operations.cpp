@@ -28,10 +28,11 @@ void orocos_opensot_ik::move(const Eigen::VectorXd& q)
     _robot->move();
 }
 
-void orocos_opensot_ik::sense(Eigen::VectorXd &q)
+void orocos_opensot_ik::sense(Eigen::VectorXd &q, Eigen::VectorXd &tau)
 {
     _robot->sense();
     _robot->getJointPosition(q);
+    _robot->getJointEffort(tau);
 }
 
 bool orocos_opensot_ik::configureHook()

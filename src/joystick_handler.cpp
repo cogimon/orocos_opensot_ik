@@ -1,7 +1,7 @@
 #include <joystick_handler.h>
 
-#define DEFAULT_WALKING_VEL_MAX_X 0.3
-#define DEFAULT_WALKING_VEL_MAX_Y 0.3*1.5
+#define DEFAULT_WALKING_VEL_MAX_X 0.2
+#define DEFAULT_WALKING_VEL_MAX_Y 0.2*1.5
 
 #define DEFAULT_DELTA_STEP 0.0001
 

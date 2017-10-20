@@ -22,4 +22,7 @@ void orocos_opensot_ik::logRobot(const XBot::ModelInterface::Ptr robot)
 
     robot->getVelocityTwist("r_sole", tmp3);
     _logger->add("rsole_vel", tmp3);
+
+    robot->getPose("Waist", tmp2);
+    _logger->add("waist_pos", tmp2.matrix());
 }

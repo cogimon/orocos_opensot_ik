@@ -51,10 +51,11 @@ bool orocos_opensot_ik::startHook()
     _dq.setZero(_model->getJointNum());
 
     _qm.setZero(_robot->getJointNum());
+    _taum.setZero(_robot->getJointNum());
 
     std::cout<<"_qm: "<<_qm<<std::endl;
 
-    sense(_qm);
+    sense(_qm, _taum);
     _q.segment(6,_qm.size()) = _qm;
 
     std::cout<<"_q: "<<_q<<std::endl;
@@ -62,6 +63,8 @@ bool orocos_opensot_ik::startHook()
     _model->setJointPosition(_q);
     _model->setJointVelocity(_dq);
     _model->update();
+
+    std::cout<<"Mass: "<<_model->getMass()<<std::endl;
 
     //Update world according this new configuration:
     KDL::Frame l_sole_T_Waist;
@@ -92,9 +95,18 @@ bool orocos_opensot_ik::startHook()
                                         foot_size,
                                         "l_sole", "r_sole", "Waist"));
     _wpg->setStepHeight(_step_height);
-    _wpg->setFootSpan(_wpg->getFootSpan()*0.8);
+    _wpg->setFootSpan(_wpg->getFootSpan()*0.9);//0.8
     next_state = _wpg->getCurrentState();
     integrator.set(_wpg->getCurrentState(), next_state, _wpg->getDuration(), this->getPeriod());
+
+    Eigen::Vector3d com;
+    _model->getCOM(com);
+    Eigen::Affine3d waist;
+    _model->getPose("Waist", waist);
+
+    offset = -com + waist.translation();
+
+
     return true;
 }
 
@@ -103,8 +115,9 @@ bool orocos_opensot_ik::startHook()
 void orocos_opensot_ik::updateHook()
 {
     _logger->add("q", _q);
-    sense(_qm);
+    sense(_qm, _taum);
     _logger->add("qm", _qm);
+    _logger->add("taum", _taum);
 
 
     RTT::FlowStatus fs = _joystik_port.read(joystik_msg);
@@ -143,8 +156,11 @@ void orocos_opensot_ik::updateHook()
         update_counter++;
     }
     integrator.Tick();
-    ik->setWalkingReferences(integrator.Output(), _robot->getForceTorque());
+    _out = integrator.Output();
+    _out.com.pos += offset;
+    ik->setWalkingReferences(_out, _robot->getForceTorque());
     integrator.Output().log(_logger, "integrator");
+    _out.log(_logger, "integrator_stabilized");
 
 
     ik->waist->update(_q);

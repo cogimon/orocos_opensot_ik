@@ -27,7 +27,7 @@ public:
                const double dT, const double ankle_height,
                const Eigen::Vector2d& foot_size);
 
-    void setWalkingReferences(const legged_robot::AbstractVariable &next_state,
+    void setWalkingReferences(legged_robot::AbstractVariable &next_state,
                               const std::map< std::string, XBot::ForceTorqueSensor::ConstPtr > frames_wrenches_map);
 
     Cartesian::Ptr left_leg;
@@ -51,6 +51,7 @@ public:
     Eigen::MatrixXd desired_pose;
 
     CompliantStabilizer stabilizer;
+    Vector3d olddelta;
 };
 
 

@@ -33,7 +33,7 @@ public:
 private:
 
     bool attachToRobot(const std::string &robot_name, const std::string &config_path);
-    void sense(Eigen::VectorXd& q);
+    void sense(Eigen::VectorXd& q, Eigen::VectorXd& tau);
     void move(const Eigen::VectorXd& q);
     void setReferences(const sensor_msgs::Joy& msg);
     void setWorld(const KDL::Frame& l_sole_T_Waist, Eigen::VectorXd& q);
@@ -50,6 +50,7 @@ private:
 
     Eigen::VectorXd _q;
     Eigen::VectorXd _qm;
+    Eigen::VectorXd _taum;
     Eigen::VectorXd _dq;
 
     boost::shared_ptr<opensot_ik> ik;
@@ -79,6 +80,10 @@ private:
 
 
     XBot::MatLogger::Ptr _logger;
+
+
+    legged_robot::AbstractVariable _out;
+    Eigen::Vector3d offset;
 };
 
 #endif

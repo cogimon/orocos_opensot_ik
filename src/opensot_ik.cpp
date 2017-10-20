@@ -14,18 +14,18 @@ opensot_ik::opensot_ik(const Eigen::VectorXd &q,
     _dT(dT),
     desired_twist(6),
     desired_pose(4,4),
-    stabilizer(dT, model->getMass(), ankle_height, foot_size)
-//               DEFAULT_Fzmin,
-//               getGains(0.1,0.3,0.), getGains(-0.005,-0.03,0.),
-//               getGains(DEFAULT_MaxLimsx, DEFAULT_MaxLimsy, DEFAULT_MaxLimsz),
-//               getGains(DEFAULT_MinLimsx, DEFAULT_MinLimsy, DEFAULT_MinLimsz))
+    stabilizer(dT, model->getMass(), ankle_height, foot_size,
+               10.,
+               getGains(0.1,0.2,0.), getGains(-0.005,-0.005,0.),
+               getGains(DEFAULT_MaxLimsx, DEFAULT_MaxLimsy, DEFAULT_MaxLimsz),
+               getGains(DEFAULT_MinLimsx, DEFAULT_MinLimsy, DEFAULT_MinLimsz))
 {
     left_leg.reset(new Cartesian("left_leg", q, *model, "l_sole", "world"));
     left_leg->setLambda(1.);
     right_leg.reset(new Cartesian("right_leg", q, *model, "r_sole", "world"));
     right_leg->setLambda(1.);
     com.reset(new CoM(q, *model));
-    com->setLambda(1.);
+    com->setLambda(0.);
 
     waist.reset(new Cartesian("waist", q, *model, "Waist", "world"));
     waist->setLambda(1.);
@@ -35,6 +35,7 @@ opensot_ik::opensot_ik(const Eigen::VectorXd &q,
     waist_orientation->setLambda(1.);
 
     mom.reset(new AngularMomentum(q, *model));
+    mom->setWeight(0.01*Eigen::MatrixXd(3,3).Identity(3,3));
     Eigen::Vector6d L;
     model->getCentroidalMomentum(L);
     mom->setReference(dT*L.segment(3,3));
@@ -63,7 +64,8 @@ opensot_ik::opensot_ik(const Eigen::VectorXd &q,
 
     joint_vel_lims.reset(new VelocityLimits(2., dT, q.size()));
 
-    stack = ((left_leg + right_leg)/(com + waist_orientation)/mom)<<joint_lims<<joint_vel_lims;
+    stack = ((left_leg + right_leg)/(waist+mom))<<joint_lims<<joint_vel_lims;
+
 
 //      iHQP.reset(new QPOases_sot(stack->getStack(), stack->getBounds(),capture_point, 1e5));
     iHQP.reset(new QPOases_sot(stack->getStack(), stack->getBounds(), 1e10));
@@ -75,7 +77,7 @@ opensot_ik::opensot_ik(const Eigen::VectorXd &q,
     desired_pose.setIdentity(4,4);
 }
 
-void opensot_ik::setWalkingReferences(const legged_robot::AbstractVariable &next_state,
+void opensot_ik::setWalkingReferences(legged_robot::AbstractVariable &next_state,
                                       const std::map< std::string, XBot::ForceTorqueSensor::ConstPtr > frames_wrenches_map)
 {
 
@@ -121,6 +123,16 @@ void opensot_ik::setWalkingReferences(const legged_robot::AbstractVariable &next
                                                   CopPos_L, CopPos_R,
                                                   next_state.lsole.pos, next_state.rsole.pos);
 
-    com->setReference(next_state.com.pos + delta_com, next_state.com.vel*_dT);
+    next_state.com.pos += delta_com;
+    olddelta=delta_com;
+    //next_state.com.vel += (delta_com-olddelta)/_dT;
+    next_state.com.vel += delta_com/_dT;
+    com->setReference(next_state.com.pos, next_state.com.vel*_dT);
+
+    Eigen::MatrixXd T = waist->getActualPose();
+    T(0,3) = next_state.com.pos[0];
+    T(1,3) = next_state.com.pos[1];
+    T(2,3) = next_state.com.pos[2];
+    waist->setReference(T);
 }
 
