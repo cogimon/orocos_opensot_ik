@@ -1,5 +1,12 @@
 #include <opensot_ik.h>
 
+Eigen::Vector3d getGains(const double x, const double y, const double z)
+{
+    Eigen::Vector3d tmp;
+    tmp<<x,y,z;
+    return tmp;
+}
+
 opensot_ik::opensot_ik(const Eigen::VectorXd &q,
                        const XBot::ModelInterface::Ptr model,
                        const double dT, const double ankle_height,
@@ -8,6 +15,10 @@ opensot_ik::opensot_ik(const Eigen::VectorXd &q,
     desired_twist(6),
     desired_pose(4,4),
     stabilizer(dT, model->getMass(), ankle_height, foot_size)
+//               DEFAULT_Fzmin,
+//               getGains(0.1,0.3,0.), getGains(-0.005,-0.03,0.),
+//               getGains(DEFAULT_MaxLimsx, DEFAULT_MaxLimsy, DEFAULT_MaxLimsz),
+//               getGains(DEFAULT_MinLimsx, DEFAULT_MinLimsy, DEFAULT_MinLimsz))
 {
     left_leg.reset(new Cartesian("left_leg", q, *model, "l_sole", "world"));
     left_leg->setLambda(1.);
@@ -52,10 +63,10 @@ opensot_ik::opensot_ik(const Eigen::VectorXd &q,
 
     joint_vel_lims.reset(new VelocityLimits(2., dT, q.size()));
 
-    stack = ((left_leg + right_leg)/(com + waist_orientation))<<joint_lims<<joint_vel_lims;
+    stack = ((left_leg + right_leg)/(com + waist_orientation)/mom)<<joint_lims<<joint_vel_lims;
 
 //      iHQP.reset(new QPOases_sot(stack->getStack(), stack->getBounds(),capture_point, 1e5));
-    iHQP.reset(new QPOases_sot(stack->getStack(), stack->getBounds(), 1e8));
+    iHQP.reset(new QPOases_sot(stack->getStack(), stack->getBounds(), 1e10));
 
 
 
@@ -106,7 +117,9 @@ void opensot_ik::setWalkingReferences(const legged_robot::AbstractVariable &next
     frames_wrenches_map.at("l_leg_ft")->getWrench(left_wrench);
     Eigen::Vector6d right_wrench;
     frames_wrenches_map.at("r_leg_ft")->getWrench(right_wrench);
-    Eigen::Vector3d delta_com = stabilizer.update(left_wrench, right_wrench, CopPos_R, CopPos_L, next_state.lsole.pos, next_state.rsole.pos);
+    Eigen::Vector3d delta_com = stabilizer.update(left_wrench, right_wrench,
+                                                  CopPos_L, CopPos_R,
+                                                  next_state.lsole.pos, next_state.rsole.pos);
 
     com->setReference(next_state.com.pos + delta_com, next_state.com.vel*_dT);
 }

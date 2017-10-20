@@ -122,13 +122,10 @@ void orocos_opensot_ik::updateHook()
 
     logRobot(_model);
 
-//    Eigen::Vector6d L;
-//    _model->getCentroidalMomentum(L);
-//    ik->mom->setReference(this->getPeriod()*L.segment(3,3));
-
-//    Eigen::Vector3d com;
-//    _model->getCOM(com);
-//    std::cout<<"com: ["<<com<<"]"<<std::endl;
+    Eigen::Vector6d L;
+    _model->getCentroidalMomentum(L);
+    _logger->add("angular_mom", L.segment(3,3));
+    ik->mom->setReference(this->getPeriod()*L.segment(3,3));
 
     if(update_counter == relative_activity)
     {
