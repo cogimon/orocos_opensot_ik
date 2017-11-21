@@ -35,7 +35,10 @@ if (NOT OROCOS-RTT_FOUND)
 endif()
 
 find_package(YCM QUIET)
-find_package(rtt-core-extensions REQUIRED)
+find_package(RST-RT REQUIRED)
+include_directories(BEFORE SYSTEM ${RST-RT_INCLUDE_DIRS})
+add_definitions(${RST-RT_CFLAGS})
+link_directories(${RST-RT_LIBRARY_DIR} ${RST-RT_LIBRARY_DIRS})
 find_package(urdf REQUIRED COMPONENTS)
 find_package(srdfdom REQUIRED COMPONENTS)
 find_package(OpenSoT REQUIRED)
@@ -45,8 +48,7 @@ find_package(rtt_sensor_msgs REQUIRED)
 
 message(STATUS "test ${orocos-ocl_LIBRARY_DIRS}")
 
-include_directories(${RTT-CORE-EXTENSIONS_INCLUDE_DIRS} ${OpenSoT_INCLUDE_DIRS} ${XBotInterface_INCLUDE_DIRS})
-link_directories(${RTT-CORE-EXTENSIONS_LIBRARY_DIRS})
+include_directories(${OpenSoT_INCLUDE_DIRS} ${XBotInterface_INCLUDE_DIRS})
 
 
 # Defines the orocos_* cmake macros. See that file for additional
@@ -60,14 +62,14 @@ include(${OROCOS-RTT_USE_FILE_PATH}/UseOROCOS-RTT.cmake)
 orocos_component(${CMAKE_PROJECT_NAME} ${PROJECT_SOURCE_DIR}/src/orocos_opensot_ik.cpp) 
 # target_link_libraries()
 if(OROCOS_TARGET STREQUAL "xenomai")
-	target_link_libraries(${CMAKE_PROJECT_NAME} ${RST-RT_LIBRARIES} ${RTT-CORE-EXTENSIONS_LIBRARIES} ${urdf_LIBRARIES}
+	target_link_libraries(${CMAKE_PROJECT_NAME} ${RST-RT_LIBRARIES}  ${urdf_LIBRARIES}
                       ${USE_OROCOS_LIBRARIES} ${OROCOS-RTT_LIBRARIES} ${OpenSoT_LIBRARIES}
                       ${XBotInterface_LIBRARIES}
                       $ENV{ROBOTOLOGY_ROOT}/orocos_ws/install_isolated/lib/librtt_ros-xenomai.so
                       $ENV{ROBOTOLOGY_ROOT}/orocos_ws/install_isolated/lib/librtt_rosclock-xenomai.so
                       $ENV{ROBOTOLOGY_ROOT}/orocos_ws/install_isolated/lib/librtt_rostopic-xenomai.so)
 else()
-	target_link_libraries(${CMAKE_PROJECT_NAME} ${RST-RT_LIBRARIES} ${RTT-CORE-EXTENSIONS_LIBRARIES} ${urdf_LIBRARIES}
+	target_link_libraries(${CMAKE_PROJECT_NAME} ${RST-RT_LIBRARIES}  ${urdf_LIBRARIES}
                       ${USE_OROCOS_LIBRARIES} ${OROCOS-RTT_LIBRARIES} ${OpenSoT_LIBRARIES}
                       ${XBotInterface_LIBRARIES} ${orocos-ocl_LIBRARY_DIRS}/librtt_rostopic-gnulinux.so
                       ${orocos-ocl_LIBRARY_DIRS}/librtt_rosclock-gnulinux.so)
