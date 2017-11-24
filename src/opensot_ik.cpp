@@ -16,7 +16,8 @@ opensot_ik::opensot_ik(const Eigen::VectorXd &q,
     desired_pose(4,4),
     stabilizer(dT, model->getMass(), ankle_height, foot_size,
                10.,
-               getGains(0.1,0.2,0.), getGains(-0.005,-0.005,0.),
+               //getGains(0.1,0.2,0.), getGains(-0.005,-0.005,0.),
+               getGains(0.1,0.1,0.), getGains(-0.005,-0.005,0.),
                getGains(DEFAULT_MaxLimsx, DEFAULT_MaxLimsy, DEFAULT_MaxLimsz),
                getGains(DEFAULT_MinLimsx, DEFAULT_MinLimsy, DEFAULT_MinLimsz))
 {
@@ -25,7 +26,7 @@ opensot_ik::opensot_ik(const Eigen::VectorXd &q,
     right_leg.reset(new Cartesian("right_leg", q, *model, "r_sole", "world"));
     right_leg->setLambda(1.);
     com.reset(new CoM(q, *model));
-    com->setLambda(0.);
+    com->setLambda(0.1);
 
     waist.reset(new Cartesian("waist", q, *model, "Waist", "world"));
     waist->setLambda(1.);
@@ -35,7 +36,7 @@ opensot_ik::opensot_ik(const Eigen::VectorXd &q,
     waist_orientation->setLambda(1.);
 
     mom.reset(new AngularMomentum(q, *model));
-    mom->setWeight(0.01*Eigen::MatrixXd(3,3).Identity(3,3));
+    mom->setWeight(0.02*Eigen::MatrixXd(3,3).Identity(3,3));
     Eigen::Vector6d L;
     model->getCentroidalMomentum(L);
     mom->setReference(dT*L.segment(3,3));
@@ -62,9 +63,9 @@ opensot_ik::opensot_ik(const Eigen::VectorXd &q,
     qmin[model->getDofIndex("LKneePitch")] = 0.3;
     joint_lims.reset(new JointLimits(q, qmax, qmin));
 
-    joint_vel_lims.reset(new VelocityLimits(2., dT, q.size()));
+    joint_vel_lims.reset(new VelocityLimits(3., dT, q.size()));
 
-    stack = ((left_leg + right_leg)/(waist+mom))<<joint_lims<<joint_vel_lims;
+    stack = ((left_leg + right_leg)/(com + mom))<<joint_lims<<joint_vel_lims;
 
 
 //      iHQP.reset(new QPOases_sot(stack->getStack(), stack->getBounds(),capture_point, 1e5));
@@ -127,7 +128,8 @@ void opensot_ik::setWalkingReferences(legged_robot::AbstractVariable &next_state
     olddelta=delta_com;
     //next_state.com.vel += (delta_com-olddelta)/_dT;
     next_state.com.vel += delta_com/_dT;
-    com->setReference(next_state.com.pos, next_state.com.vel*_dT);
+    //com->setReference(next_state.com.pos, next_state.com.vel*_dT);
+    com->setReference(next_state.com.pos);
 
     Eigen::MatrixXd T = waist->getActualPose();
     T(0,3) = next_state.com.pos[0];

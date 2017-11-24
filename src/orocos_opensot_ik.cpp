@@ -91,11 +91,11 @@ bool orocos_opensot_ik::startHook()
     double __dT = this->getPeriod()*relative_activity;
     std::cout<<"__dT: "<<__dT<<std::endl;
     update_counter = 1;
-    _wpg.reset(new legged_robot::Walker(*_model, __dT, 1.5, 0.6, //1.5, 0.6//1., 0.3
+    _wpg.reset(new legged_robot::Walker(*_model, __dT, 1.5, 0.8, //1.5, 0.6//1., 0.3
                                         foot_size,
                                         "l_sole", "r_sole", "Waist"));
     _wpg->setStepHeight(_step_height);
-    _wpg->setFootSpan(_wpg->getFootSpan()*0.9);//0.8
+    _wpg->setFootSpan(_wpg->getFootSpan()*1.);//0.8
     next_state = _wpg->getCurrentState();
     integrator.set(_wpg->getCurrentState(), next_state, _wpg->getDuration(), this->getPeriod());
 
@@ -157,7 +157,7 @@ void orocos_opensot_ik::updateHook()
     }
     integrator.Tick();
     _out = integrator.Output();
-    _out.com.pos += offset;
+    //_out.com.pos += offset;
     ik->setWalkingReferences(_out, _robot->getForceTorque());
     integrator.Output().log(_logger, "integrator");
     _out.log(_logger, "integrator_stabilized");
