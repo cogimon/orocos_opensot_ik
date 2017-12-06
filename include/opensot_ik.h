@@ -6,7 +6,8 @@
 #include <OpenSoT/tasks/velocity/AngularMomentum.h>
 #include <OpenSoT/constraints/velocity/JointLimits.h>
 #include <OpenSoT/constraints/velocity/VelocityLimits.h>
-#include <OpenSoT/constraints/velocity/CapturePoint.h>
+#include <OpenSoT/constraints/velocity/CartesianPositionConstraint.h>
+//#include <OpenSoT/constraints/velocity/CapturePoint.h>
 #include <OpenSoT/utils/AutoStack.h>
 #include <OpenSoT/solvers/QPOases.h>
 #include <OpenSoT/SubTask.h>
@@ -34,7 +35,7 @@ public:
     Cartesian::Ptr right_leg;
     Cartesian::Ptr waist;
     CoM::Ptr com;
-    CapturePointConstraint::Ptr capture_point;
+//    CapturePointConstraint::Ptr capture_point;
     CartesianPositionConstraint::Ptr com_z;
     AngularMomentum::Ptr mom;
 

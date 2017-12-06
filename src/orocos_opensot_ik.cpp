@@ -10,6 +10,7 @@
 #include <ros/ros.h>
 #include <rtt_rosclock/rtt_rosclock.h>
 #include <rtt_roscomm/rtt_rostopic.h>
+#include <chrono>
 
 
 orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
@@ -91,11 +92,13 @@ bool orocos_opensot_ik::startHook()
     double __dT = this->getPeriod()*relative_activity;
     std::cout<<"__dT: "<<__dT<<std::endl;
     update_counter = 1;
-    _wpg.reset(new legged_robot::Walker(*_model, __dT, 1.5, 0.8, //1.5, 0.6//1., 0.3
+    _wpg.reset(new legged_robot::Walker(*_model, __dT, 1.5, 0.6, //1.5, 0.6//1., 0.3
                                         foot_size,
-                                        "l_sole", "r_sole", "Waist"));
+                                        "l_sole", "r_sole", "Waist",
+                                        3,
+                                        2e2,2e3,1e3));
     _wpg->setStepHeight(_step_height);
-    _wpg->setFootSpan(_wpg->getFootSpan()*1.);//0.8
+    _wpg->setFootSpan(_wpg->getFootSpan());//0.8
     next_state = _wpg->getCurrentState();
     integrator.set(_wpg->getCurrentState(), next_state, _wpg->getDuration(), this->getPeriod());
 
@@ -114,6 +117,15 @@ bool orocos_opensot_ik::startHook()
 
 void orocos_opensot_ik::updateHook()
 {
+    RTT::os::TimeService::ticks start = RTT::os::TimeService::Instance()->getTicks();
+
+    std::chrono::milliseconds start1 = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch());
+
+    //RTT::log(RTT::Error)<<"orocos time: "<<start<<"     system time: "<<start1.count()<<RTT::endlog();
+
+
+
     _logger->add("q", _q);
     sense(_qm, _taum);
     _logger->add("qm", _qm);
@@ -163,7 +175,7 @@ void orocos_opensot_ik::updateHook()
     _out.log(_logger, "integrator_stabilized");
 
 
-    ik->waist->update(_q);
+    //ik->waist->update(_q);
     ik->stack->update(_q);
     ik->stack->log(_logger);
     //ik->com_z->update(_q);
@@ -177,6 +189,10 @@ void orocos_opensot_ik::updateHook()
     _q+=_dq;
 
     move(_q.segment(6,_qm.size()));
+
+    RTT::os::TimeService::Seconds time = RTT::os::TimeService::Instance()->secondsSince(start);
+
+    //RTT::log(RTT::Info)<<time<<RTT::endlog();
 }
 
 void orocos_opensot_ik::stopHook()
@@ -186,7 +202,7 @@ void orocos_opensot_ik::stopHook()
 
 void orocos_opensot_ik::cleanupHook()
 {
-
+    _logger->flush();
 }
 
 

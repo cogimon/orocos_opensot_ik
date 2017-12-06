@@ -1,5 +1,7 @@
 #include <opensot_ik.h>
 
+#define lambda 0.3
+
 Eigen::Vector3d getGains(const double x, const double y, const double z)
 {
     Eigen::Vector3d tmp;
@@ -22,18 +24,18 @@ opensot_ik::opensot_ik(const Eigen::VectorXd &q,
                getGains(DEFAULT_MinLimsx, DEFAULT_MinLimsy, DEFAULT_MinLimsz))
 {
     left_leg.reset(new Cartesian("left_leg", q, *model, "l_sole", "world"));
-    left_leg->setLambda(1.);
+    left_leg->setLambda(lambda);
     right_leg.reset(new Cartesian("right_leg", q, *model, "r_sole", "world"));
-    right_leg->setLambda(1.);
+    right_leg->setLambda(lambda);
     com.reset(new CoM(q, *model));
-    com->setLambda(0.1);
+    com->setLambda(lambda);
 
     waist.reset(new Cartesian("waist", q, *model, "Waist", "world"));
-    waist->setLambda(1.);
+    waist->setLambda(lambda);
     SubTask::Ptr waist_orientation;
     std::list<unsigned int> idx = {3,4,5};
     waist_orientation.reset(new SubTask(waist,idx));
-    waist_orientation->setLambda(1.);
+    waist_orientation->setLambda(lambda);
 
     mom.reset(new AngularMomentum(q, *model));
     mom->setWeight(0.02*Eigen::MatrixXd(3,3).Identity(3,3));
@@ -46,8 +48,8 @@ opensot_ik::opensot_ik(const Eigen::VectorXd &q,
          -1.*Eigen::MatrixXd::Identity(2,2);
     Eigen::VectorXd b(4);
     b<<0.03, 0.1, 0.1, 0.1;
-    capture_point.reset(new CapturePointConstraint(q, com, *model, A, b, dT,0.1));
-    capture_point->computeAngularMomentumCorrection(true);
+//    capture_point.reset(new CapturePointConstraint(q, com, *model, A, b, dT,0.1));
+//    capture_point->computeAngularMomentumCorrection(true);
 
     Eigen::MatrixXd A2(2,3);
     A2 << 0, 0,  1,

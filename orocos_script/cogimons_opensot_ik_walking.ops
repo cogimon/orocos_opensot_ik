@@ -6,9 +6,11 @@ require("os")
 
 loadComponent("gazebo","RTTGazeboEmbedded")
 
-setActivity("gazebo",0,10,ORO_SCHED_OTHER)
+setActivityOnCPU("gazebo",0,10,ORO_SCHED_OTHER,0)
 
-gazebo.argv = strings("--verbose","-s /orocos/gnulinux/rtt_gazebo_system/librtt_gazebo_system.so")
+#gazebo.argv = strings("--verbose","-s /home/enrico/advr-superbuild/build/install/lib/orocos/gnulinux/RTTGazeboClockPlugin/libRTTGazeboClockPlugin.so")
+gazebo.add_plugin("/home/enrico/advr-superbuild/build/install/lib/orocos/gnulinux/RTTGazeboClockPlugin/libRTTGazeboClockPlugin.so")
+
 
 var string path_world=os.getenv("ROBOTOLOGY_ROOT")+"/robots/cogimon-gazebo-models/iit-cogimon/empty.world"
 gazebo.world_path = path_world
@@ -26,7 +28,7 @@ gazebo.spawn_model_at_pos("cogimonb", "model://iit-cogimon", 1.0,0.0,0.0)
 import("rtt-gazebo-robot-sim")
 
 loadComponent("cogimona","cogimon::robotSim")
-setActivity("cogimona",0,11,ORO_SCHED_OTHER)
+setActivityOnCPU("cogimona",0,11,ORO_SCHED_OTHER,1)
 
 var string urdf_path = os.getenv("ROBOTOLOGY_ROOT") + "/robots/cogimon-gazebo-models/iit-cogimon/model.urdf"
 var string srdf_path = os.getenv("ROBOTOLOGY_ROOT") + "/robots/cogimon-gazebo-models/iit-cogimon/cogimon.srdf"
@@ -40,7 +42,7 @@ cogimona.setInitialPosition("left_leg", left)
 cogimona.setInitialPosition("right_leg", right)
 
 loadComponent("cogimonb","cogimon::robotSim")
-setActivity("cogimonb",0,11,ORO_SCHED_OTHER)
+setActivityOnCPU("cogimonb",0,11,ORO_SCHED_OTHER,2)
 cogimonb.loadURDFAndSRDF(urdf_path, srdf_path)
 cogimonb.getModel("cogimonb")
 cogimonb.configure()
@@ -60,7 +62,7 @@ import("rtt_sensor_msgs")
 import("orocos_opensot_ik")
 
 loadComponent("cogimona_orocos_opensot_ik","orocos_opensot_ik")
-
+setActivityOnCPU("cogimona_orocos_opensot_ik",0.002,9,ORO_SCHED_OTHER,1)
 addPeer("cogimona_orocos_opensot_ik", "cogimona")
 var string config_path = os.getenv("ROBOTOLOGY_ROOT") + "/configs/ADVR_shared/cogimon/configs/config_cogimon.yaml"
 cogimona_orocos_opensot_ik.attachToRobot("cogimona", config_path)
@@ -70,7 +72,7 @@ cogimona_orocos_opensot_ik.configure()
 
 
 loadComponent("cogimonb_orocos_opensot_ik","orocos_opensot_ik")
-
+setActivityOnCPU("cogimonb_orocos_opensot_ik",0.002,9,ORO_SCHED_OTHER,2)
 addPeer("cogimonb_orocos_opensot_ik", "cogimonb")
 cogimonb_orocos_opensot_ik.attachToRobot("cogimonb", config_path)
 cogimonb_orocos_opensot_ik.configure()

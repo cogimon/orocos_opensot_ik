@@ -8,7 +8,8 @@ loadComponent("gazebo","RTTGazeboEmbedded")
 
 setActivity("gazebo",0,10,ORO_SCHED_OTHER)
 
-gazebo.argv = strings("--verbose","-s /orocos/gnulinux/rtt_gazebo_system/librtt_gazebo_system.so")
+#gazebo.argv = strings("--verbose","-s /home/enrico/advr-superbuild/build/install/lib/orocos/gnulinux/RTTGazeboClockPlugin/libRTTGazeboClockPlugin.so")
+gazebo.add_plugin("/home/enrico/advr-superbuild/build/install/lib/orocos/gnulinux/RTTGazeboClockPlugin/libRTTGazeboClockPlugin.so")
 
 var string path_world=os.getenv("ROBOTOLOGY_ROOT")+"/robots/cogimon-gazebo-models/iit-cogimon/empty.world"
 gazebo.world_path = path_world
