@@ -19,6 +19,7 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
     _robot_name(""),
     _q(),
     _dq(),
+    _ddq(),
     _model_loaded(false),
     _ports_loaded(false),
     Zero(4,4),
@@ -34,7 +35,6 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
     zero3.setZero();
     Zero.setZero(4,4);
     desired_twist.setZero();
-    centroidal_momentum.setZero(6);
 }
 
 void orocos_opensot_ik::setWorld(const KDL::Frame& l_sole_T_Waist, Eigen::VectorXd& q)
@@ -50,6 +50,7 @@ bool orocos_opensot_ik::startHook()
 
     _q.setZero(_model->getJointNum());
     _dq.setZero(_model->getJointNum());
+    _ddq.setZero(_model->getJointNum());
 
     _qm.setZero(_robot->getJointNum());
     _taum.setZero(_robot->getJointNum());
@@ -142,15 +143,11 @@ void orocos_opensot_ik::updateHook()
     }
 
     _model->setJointPosition(_q);
-    _model->setJointVelocity(_dq/this->getPeriod());
+    _model->setJointVelocity(_dq);
     _model->update();
 
     logRobot(_model);
 
-    Eigen::Vector6d L;
-    _model->getCentroidalMomentum(L);
-    _logger->add("angular_mom", L.segment(3,3));
-    ik->mom->setReference(this->getPeriod()*L.segment(3,3));
 
     if(update_counter == relative_activity)
     {
@@ -181,12 +178,14 @@ void orocos_opensot_ik::updateHook()
     //ik->com_z->update(_q);
     //ik->capture_point->update(_q);
 
-    if(!ik->iHQP->solve(_dq)){
-        _dq.setZero(_dq.size());
+    if(!ik->iHQP->solve(_ddq)){
+        _ddq.setZero(_ddq.size());
         std::cout<<"iHQP can not solve"<<std::endl;}
 
 
-    _q+=_dq;
+    _dq += _ddq*this->getPeriod();
+    _q += _dq*this->getPeriod() + 0.5*_ddq*(this->getPeriod()*this->getPeriod());
+
 
     move(_q.segment(6,_qm.size()));
 

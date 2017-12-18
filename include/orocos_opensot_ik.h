@@ -52,6 +52,7 @@ private:
     Eigen::VectorXd _qm;
     Eigen::VectorXd _taum;
     Eigen::VectorXd _dq;
+    Eigen::VectorXd _ddq;
 
     boost::shared_ptr<opensot_ik> ik;
 

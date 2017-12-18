@@ -1,23 +1,20 @@
 #ifndef _OPENSOT_IK_H
 #define _OPENSOT_IK_H
 
-#include <OpenSoT/tasks/velocity/CoM.h>
-#include <OpenSoT/tasks/velocity/Cartesian.h>
-#include <OpenSoT/tasks/velocity/AngularMomentum.h>
-#include <OpenSoT/constraints/velocity/JointLimits.h>
-#include <OpenSoT/constraints/velocity/VelocityLimits.h>
-#include <OpenSoT/constraints/velocity/CartesianPositionConstraint.h>
-//#include <OpenSoT/constraints/velocity/CapturePoint.h>
+#include <OpenSoT/tasks/acceleration/CoM.h>
+#include <OpenSoT/tasks/acceleration/Cartesian.h>
+#include <OpenSoT/tasks/acceleration/Postural.h>
+#include <OpenSoT/constraints/GenericConstraint.h>
 #include <OpenSoT/utils/AutoStack.h>
 #include <OpenSoT/solvers/QPOases.h>
-#include <OpenSoT/SubTask.h>
+#include <OpenSoT/utils/Affine.h>
 #include <mpcqp_walking/walker.h>
 #include <rst-rt/dynamics/Wrench.hpp>
 
 #include <compliant_stabilizer/compliantstabilizer.h>
 
-using namespace OpenSoT::tasks::velocity;
-using namespace OpenSoT::constraints::velocity;
+using namespace OpenSoT::tasks::acceleration;
+using namespace OpenSoT::constraints;
 using namespace OpenSoT;
 using namespace OpenSoT::solvers;
 
@@ -35,21 +32,18 @@ public:
     Cartesian::Ptr right_leg;
     Cartesian::Ptr waist;
     CoM::Ptr com;
-//    CapturePointConstraint::Ptr capture_point;
-    CartesianPositionConstraint::Ptr com_z;
-    AngularMomentum::Ptr mom;
+    Postural::Ptr postural;
 
     double _dT;
 
-    JointLimits::Ptr joint_lims;
-    VelocityLimits::Ptr joint_vel_lims;
+    GenericConstraint::Ptr joint_acc_lims;
 
     AutoStack::Ptr stack;
 
     QPOases_sot::Ptr iHQP;
 
     Eigen::VectorXd desired_twist;
-    Eigen::MatrixXd desired_pose;
+    Eigen::Affine3d desired_pose;
 
     CompliantStabilizer stabilizer;
     Vector3d olddelta;
