@@ -28,8 +28,8 @@ import("rtt-gazebo-robot-sim")
 loadComponent("cogimon","cogimon::robotSim")
 setActivity("cogimon",0,11,ORO_SCHED_OTHER)
 
-var string urdf_path = os.getenv("ROBOTOLOGY_ROOT") + "/robots/cogimon-gazebo-models/iit-cogimon/model.urdf"
-var string srdf_path = os.getenv("ROBOTOLOGY_ROOT") + "/robots/cogimon-gazebo-models/iit-cogimon/cogimon.srdf"
+var string urdf_path = os.getenv("ROBOTOLOGY_ROOT") + "/robots/iit-cogimon-ros-pkg/cogimon_urdf/urdf/cogimon.urdf"
+var string srdf_path = os.getenv("ROBOTOLOGY_ROOT") + "/robots/iit-cogimon-ros-pkg/cogimon_srdf/srdf/cogimon.srdf"
 cogimon.loadURDFAndSRDF(urdf_path, srdf_path)
 cogimon.getModel("cogimon")
 cogimon.configure()
@@ -50,7 +50,7 @@ import("orocos_opensot_ik")
 loadComponent("cogimon_orocos_opensot_ik","orocos_opensot_ik")
 
 addPeer("cogimon_orocos_opensot_ik", "cogimon")
-var string config_path = os.getenv("ROBOTOLOGY_ROOT") + "/configs/ADVR_shared/cogimon/configs/config_cogimon.yaml"
+var string config_path = os.getenv("ROBOTOLOGY_ROOT") + "/external/orocos_opensot_ik/config/cogimon_example.yaml"
 cogimon_orocos_opensot_ik.attachToRobot("cogimon", config_path)
 cogimon_orocos_opensot_ik.configure()
 #cogimon_orocos_opensot_ik.start()
