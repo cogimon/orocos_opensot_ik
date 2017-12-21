@@ -1,6 +1,7 @@
 #include <opensot_ik.h>
 
 #define lambda 100.
+#define lambda2 2.*sqrt(lambda)
 
 Eigen::Vector3d getGains(const double x, const double y, const double z)
 {
@@ -23,29 +24,31 @@ opensot_ik::opensot_ik(const Eigen::VectorXd &q,
                getGains(DEFAULT_MinLimsx, DEFAULT_MinLimsy, DEFAULT_MinLimsz))
 {
     left_leg.reset(new Cartesian("left_leg", *model, "l_sole", "world", q));
-    left_leg->setLambda(lambda);
+    left_leg->setLambda(lambda,lambda2);
     right_leg.reset(new Cartesian("right_leg", *model, "r_sole", "world", q));
-    right_leg->setLambda(lambda);
+    right_leg->setLambda(lambda,lambda2);
     com.reset(new CoM(*model, q));
-    com->setLambda(lambda);
+    com->setLambda(lambda,lambda2);
     std::list<unsigned int> orient;
     orient.push_back(3);
     orient.push_back(4);
     orient.push_back(5);
     waist.reset(new Cartesian("waist", *model, "Waist", "world", q));
-    waist->setLambda(lambda);
-    postural.reset(new Postural("postural", *model, q.size()));
-    postural->setLambda(lambda);
+    waist->setLambda(lambda,lambda2);
+    postural.reset(new Postural(*model, q.size()));
+    postural->setLambda(lambda,lambda2);
+    std::list<unsigned int> id;
+    id.push_back(12);
 
     OpenSoT::AffineHelper var = OpenSoT::AffineHelper::Identity(model->getJointNum());
-    Eigen::VectorXd ddqmax = 10.*Eigen::VectorXd::Ones(model->getJointNum());
+    Eigen::VectorXd ddqmax = 20.*Eigen::VectorXd::Ones(model->getJointNum());
     Eigen::VectorXd ddqmin = -ddqmax;
     joint_acc_lims.reset(
         new GenericConstraint("acc_lims", var, ddqmax, ddqmin, GenericConstraint::Type::BOUND));
 
 
 
-    stack = ((left_leg + right_leg)/(com + waist%orient)/postural)<<joint_acc_lims;
+    stack = ((left_leg + right_leg)/(com + waist%orient + postural%id))<<joint_acc_lims;
 
 
 //      iHQP.reset(new QPOases_sot(stack->getStack(), stack->getBounds(),capture_point, 1e5));
@@ -63,7 +66,7 @@ void opensot_ik::setWalkingReferences(legged_robot::AbstractVariable &next_state
 {
 
     desired_twist.setZero(6);
-    desired_pose.Identity();
+    left_leg->getReference(desired_pose);
 
     desired_twist[0] = next_state.lsole.vel[0];
     desired_twist[1] = next_state.lsole.vel[1];
@@ -76,7 +79,7 @@ void opensot_ik::setWalkingReferences(legged_robot::AbstractVariable &next_state
     left_leg->setReference(desired_pose);
 
     desired_twist.setZero(6);
-    desired_pose.Identity();
+    right_leg->getReference(desired_pose);
 
     desired_twist[0] = next_state.rsole.vel[0];
     desired_twist[1] = next_state.rsole.vel[1];

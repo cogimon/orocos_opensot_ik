@@ -18,6 +18,7 @@
 #include <XBotInterface/RobotInterface.h>
 
 #include <opensot_ik.h>
+#include <OpenSoT/floating_base_estimation/qp_estimation.h>
 
 #include <joystick_handler.h>
 
@@ -33,7 +34,7 @@ public:
 private:
 
     bool attachToRobot(const std::string &robot_name, const std::string &config_path);
-    void sense(Eigen::VectorXd& q, Eigen::VectorXd& tau);
+    void sense(Eigen::VectorXd& q, Eigen::VectorXd& dq, Eigen::VectorXd& tau);
     void move(const Eigen::VectorXd& q);
     void setReferences(const sensor_msgs::Joy& msg);
     void setWorld(const KDL::Frame& l_sole_T_Waist, Eigen::VectorXd& q);
@@ -44,17 +45,23 @@ private:
 
     XBot::ModelInterface::Ptr _model;
     XBot::RobotInterface::Ptr _robot;
+    XBot::ModelInterface::Ptr _model_m;
 
     bool _model_loaded;
     bool _ports_loaded;
 
     Eigen::VectorXd _q;
     Eigen::VectorXd _qm;
+    Eigen::VectorXd _dqm;
     Eigen::VectorXd _taum;
     Eigen::VectorXd _dq;
     Eigen::VectorXd _ddq;
 
+    Eigen::VectorXd _Qik;
+    Eigen::VectorXd _dQik;
+
     boost::shared_ptr<opensot_ik> ik;
+    boost::shared_ptr<OpenSoT::floating_base_estimation::qp_estimation> fb;
 
     RTT::InputPort<sensor_msgs::Joy> _joystik_port;
     sensor_msgs::Joy joystik_msg;
