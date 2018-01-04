@@ -141,15 +141,6 @@ bool orocos_opensot_ik::startHook()
 
 void orocos_opensot_ik::updateHook()
 {
-    RTT::os::TimeService::ticks start = RTT::os::TimeService::Instance()->getTicks();
-
-    std::chrono::milliseconds start1 = std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::system_clock::now().time_since_epoch());
-
-    //RTT::log(RTT::Error)<<"orocos time: "<<start<<"     system time: "<<start1.count()<<RTT::endlog();
-
-
-
     _logger->add("q", _q);
     _logger->add("dq", _dq);
     sense(_qm,_dqm, _taum);
@@ -258,9 +249,7 @@ void orocos_opensot_ik::updateHook()
 
     move(_q.segment(6,_q.size()-6));
 
-    RTT::os::TimeService::Seconds time = RTT::os::TimeService::Instance()->secondsSince(start);
 
-    //RTT::log(RTT::Info)<<time<<RTT::endlog();
 }
 
 void orocos_opensot_ik::stopHook()
