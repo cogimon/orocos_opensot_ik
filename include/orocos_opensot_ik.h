@@ -21,6 +21,9 @@
 #include <OpenSoT/floating_base_estimation/qp_estimation.h>
 
 #include <joystick_handler.h>
+#include <rst-rt/geometry/Pose.hpp>
+
+#define GROUND_TRUTH_GAZEBO true
 
 class orocos_opensot_ik: public RTT::TaskContext {
 public:
@@ -92,6 +95,15 @@ private:
 
     legged_robot::AbstractVariable _out;
     Eigen::Vector3d offset;
+
+    bool _compute_fb;
+
+//#if GROUND_TRUTH_GAZEBO
+    void logFloatingBaseFromGazebo(Eigen::Affine3d& fb_pose);
+    Eigen::Affine3d _fb_offset;
+    RTT::OperationCaller<rstrt::geometry::Pose(const std::string&)> getLinkPoseGazebo;
+    boost::shared_ptr<TaskContext> _task_peer_ptr;
+//#endif
 };
 
 #endif

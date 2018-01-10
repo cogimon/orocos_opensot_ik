@@ -3,6 +3,7 @@
 
 bool orocos_opensot_ik::attachToRobot(const std::string &robot_name, const std::string &config_path)
 {
+    _robot_name = robot_name;
     _ports_loaded =  XBot::RobotInterfaceOROCOS::attachToRobot(robot_name, config_path,
         _robot, std::shared_ptr<RTT::TaskContext>(this));
 

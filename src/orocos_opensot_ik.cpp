@@ -23,7 +23,8 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
     _model_loaded(false),
     _ports_loaded(false),
     Zero(4,4),
-    _step_height(0.08)
+    _step_height(0.08),
+    _compute_fb(false)
 {
     _logger = XBot::MatLogger::getLogger("/tmp/orocos_opensot_ik");
 
@@ -46,6 +47,16 @@ void orocos_opensot_ik::setWorld(const KDL::Frame& l_sole_T_Waist, Eigen::Vector
 
 bool orocos_opensot_ik::startHook()
 {
+#if GROUND_TRUTH_GAZEBO
+    _task_peer_ptr.reset(this->getPeer(_robot_name));
+
+    if(!_task_peer_ptr){
+        RTT::log(RTT::Error)<<"Can not getPeer("<<_robot_name<<")"<<RTT::endlog();
+        return false;}
+    getLinkPoseGazebo = _task_peer_ptr->getOperation("getLinkPoseGazebo");
+#endif
+
+
     _joystik_port.createStream(rtt_roscomm::topic("joy"));
 
     _q.setZero(_model->getJointNum());
@@ -134,13 +145,41 @@ bool orocos_opensot_ik::startHook()
     _Qik<<_q.segment(0,6),_qm;
     _dQik<<_dq.segment(0,6),_dqm;
 
+
+#if GROUND_TRUTH_GAZEBO
+    Eigen::Affine3d fb_pose;
+    logFloatingBaseFromGazebo(fb_pose);
+    _logger->add("Q_gazebo", fb_pose.matrix());
+    _fb_offset = waist*fb_pose.inverse();
+    RTT::log(RTT::Info)<<"_fb_offset: \n"<<_fb_offset.matrix()<<RTT::endlog();
+#endif
+
     return true;
 }
 
-
+#if GROUND_TRUTH_GAZEBO
+void orocos_opensot_ik::logFloatingBaseFromGazebo(Eigen::Affine3d& fb_pose)
+{
+    rstrt::geometry::Pose _base_link_pose_gazebo = getLinkPoseGazebo("base_link");
+    Eigen::Quaterniond quat(_base_link_pose_gazebo.rotation.rotation[0],
+                           _base_link_pose_gazebo.rotation.rotation[1],
+                           _base_link_pose_gazebo.rotation.rotation[2],
+                           _base_link_pose_gazebo.rotation.rotation[3]);
+    Eigen::Affine3d tmp;
+    tmp.linear() = quat.toRotationMatrix();
+    tmp.translation() = _base_link_pose_gazebo.translation.translation.cast<double>();
+    fb_pose = tmp;
+}
+#endif
 
 void orocos_opensot_ik::updateHook()
 {
+#if GROUND_TRUTH_GAZEBO
+    Eigen::Affine3d fb_pose;
+    logFloatingBaseFromGazebo(fb_pose);
+    _logger->add("Q_gazebo", (_fb_offset*fb_pose).matrix());
+#endif
+
     _logger->add("q", _q);
     _logger->add("dq", _dq);
     sense(_qm,_dqm, _taum);
@@ -198,28 +237,30 @@ void orocos_opensot_ik::updateHook()
     Eigen::Vector6d right_wrench;
     _robot->getForceTorque().at("r_leg_ft")->getWrench(right_wrench);
     if(left_wrench[2] >= 20.){
-        if(!fb->setContactState("l_sole", true))
-            std::cout<<"setContactState(l_sole, true) returned false!"<<std::endl;
+        fb->setContactState("l_sole", true);
+        _compute_fb = true;
     }
     else{
-        if(!fb->setContactState("l_sole", false))
-            std::cout<<"setContactState(l_sole, false) returned false!"<<std::endl;
+        _compute_fb = false;
+        fb->setContactState("l_sole", false);
     }
     if(right_wrench[2] >= 20.){
-        if(!fb->setContactState("r_sole", true))
-            std::cout<<"setContactState(r_sole, true) returned false!"<<std::endl;
+        fb->setContactState("r_sole", true);
+        _compute_fb = true;
     }
     else{
-        if(!fb->setContactState("r_sole", false))
-            std::cout<<"setContactState(r_sole, false) returned false!"<<std::endl;
+        _compute_fb = false;
+        fb->setContactState("r_sole", false);
     }
 
     _model->setJointPosition(_q);
     _model->setJointVelocity(_dq);
     _model->update();
 
-    if(!fb->update(this->getPeriod()))
-        std::cout<<"fb QP can not solve"<<std::endl;
+    if(_compute_fb){
+        if(!fb->update(this->getPeriod()))
+            std::cout<<"fb QP can not solve"<<std::endl;
+        _compute_fb = false;}
     fb->log(_logger);
     _model_m->getJointPosition(_Qik);
     _model_m->getJointVelocity(_dQik);
