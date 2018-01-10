@@ -23,6 +23,8 @@
 
 #include <sensor_msgs/Joy.h>
 
+#include <compliant_stabilizer/compliantstabilizer.h>
+
 using namespace OpenSoT::tasks::velocity;
 using namespace OpenSoT::constraints::velocity;
 using namespace OpenSoT;
@@ -35,19 +37,23 @@ public:
                const double dT)
     {
         left_leg.reset(new Cartesian("left_leg", q, *model, "l_sole", "world"));
-        left_leg->setLambda(0.002);
+        left_leg->setLambda(0.1);
         right_leg.reset(new Cartesian("right_leg", q, *model, "r_sole", "world"));
-        right_leg->setLambda(0.002);
+        right_leg->setLambda(0.1);
         com.reset(new CoM(q, *model));
-        com->setLambda(0.002);
+        com->setLambda(0.1);
 
         waist.reset(new Cartesian("waist", q, *model, "Waist", "world"));
-        waist->setLambda(0.002);
+        waist->setLambda(1.);
+        //waist->setOrientationErrorGain(0.01);
 
         mom.reset(new AngularMomentum(q, *model));
         Eigen::Vector6d L;
         model->getCentroidalMomentum(L);
         mom->setReference(dT*L.segment(3,3));
+//        Eigen::MatrixXd W(3,3);
+//        W.setIdentity(3,3);
+//        mom->setWeight(0.01*W);
 
         Eigen::MatrixXd A(4,2);
         A << Eigen::MatrixXd::Identity(2,2),
@@ -63,7 +69,7 @@ public:
         Eigen::VectorXd b2(2);
         b2<< 0.51, -0.4;
         com_z.reset(new CartesianPositionConstraint(q, com, A2, b2, 0.1));
-        waist->getConstraints().push_back(com_z);
+       // waist->getConstraints().push_back(com_z);
 
         Eigen::VectorXd qmin, qmax;
         model->getJointLimits (qmin, qmax);
@@ -71,12 +77,27 @@ public:
         qmin[model->getDofIndex("LKneePitch")] = 0.3;
         joint_lims.reset(new JointLimits(q, qmax, qmin));
 
-        joint_vel_lims.reset(new VelocityLimits(3., dT, q.size()));
+        joint_vel_lims.reset(new VelocityLimits(10., dT, q.size()));
+
+        std::list<unsigned int> id_com;
+        id_com.push_back(0);
+        id_com.push_back(1);
+        std::list<unsigned int> id_waist;
+        id_waist.push_back(2);
+        id_waist.push_back(3);
+        id_waist.push_back(4);
+        id_waist.push_back(5);
 
         stack = ((left_leg + right_leg)/
-                  waist)<<joint_lims<<joint_vel_lims;
+                 (com%id_com)/
+                 waist)//<<joint_lims
+                      <<joint_vel_lims;
 
-        iHQP.reset(new QPOases_sot(stack->getStack(), stack->getBounds(),capture_point, 1e5));
+//        stack = (waist/(left_leg + right_leg)/
+//                 (com%id_com))//<<joint_lims
+//                      <<joint_vel_lims;
+
+        iHQP.reset(new QPOases_sot(stack->getStack(), stack->getBounds(), 1e2));
     }
 
     Cartesian::Ptr left_leg;
@@ -100,6 +121,7 @@ public:
 class orocos_opensot_ik: public RTT::TaskContext {
 public:
     orocos_opensot_ik(std::string const & name);
+    ~orocos_opensot_ik();
 
     bool configureHook();
     bool startHook();
@@ -110,7 +132,7 @@ private:
 
     bool loadConfig(const std::string& config_path);
     bool attachToRobot(const std::string& robot_name);
-    void sense(Eigen::VectorXd& q);
+    void sense(Eigen::VectorXd& q, Eigen::VectorXd &dq, Eigen::VectorXd &tau);
     void move(const Eigen::VectorXd& q);
     void setReferences(const sensor_msgs::Joy& msg);
     void setWorld(const KDL::Frame& l_sole_T_Waist, Eigen::VectorXd& q);
@@ -126,6 +148,10 @@ private:
 
     Eigen::VectorXd _q;
     Eigen::VectorXd _dq;
+
+    Eigen::VectorXd _q_m;
+    Eigen::VectorXd _dq_m;
+    Eigen::VectorXd _tau_m;
 
 
     std::map<std::string, std::vector<std::string> > _map_kin_chains_joints;
@@ -151,6 +177,18 @@ private:
     Eigen::MatrixXd Zero;
 
     double _v_max;
+
+    XBot::MatLogger::Ptr _logger;
+
+    Eigen::Vector3d getGains(const double x, const double y, const double z);
+    void stabilizer();
+
+    boost::shared_ptr<CompliantStabilizer> _stabilizer;
+
+    Eigen::Vector3d _com_initial;
+
+    double _jump_time;
+    double _jump_counter;
 };
 
 #endif

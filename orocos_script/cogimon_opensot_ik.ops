@@ -8,8 +8,8 @@ loadComponent("gazebo","RTTGazeboEmbedded")
 
 setActivity("gazebo",0,10,ORO_SCHED_OTHER)
 
-gazebo.argv = strings("--verbose","-s /orocos/gnulinux/rtt_gazebo_system/librtt_gazebo_system.so")
-
+#gazebo.argv = strings("--verbose","-s /orocos/gnulinux/rtt_gazebo_system/librtt_gazebo_system.so")
+gazebo.add_plugin("/home/enrico/advr-superbuild/build/install/lib/orocos/gnulinux/RTTGazeboClockPlugin/libRTTGazeboClockPlugin.so")
 
 gazebo.configure()
 
@@ -24,14 +24,19 @@ import("rtt-gazebo-robot-sim")
 loadComponent("cogimon","cogimon::robotSim")
 setActivity("cogimon",0,11,ORO_SCHED_OTHER)
 
-var string urdf_path = os.getenv("ROBOTOLOGY_ROOT") + "/robots/cogimon-gazebo-models/iit-cogimon/model.urdf"
-var string srdf_path = os.getenv("ROBOTOLOGY_ROOT") + "/robots/cogimon-gazebo-models/iit-cogimon/cogimon.srdf"
+var string urdf_path = os.getenv("ROBOTOLOGY_ROOT") + "/robots/iit-cogimon-ros-pkg/cogimon_urdf/urdf/cogimon.urdf"
+var string srdf_path = os.getenv("ROBOTOLOGY_ROOT") + "/robots/iit-cogimon-ros-pkg/cogimon_srdf/srdf/cogimon.srdf"
 cogimon.loadURDFAndSRDF(urdf_path, srdf_path)
 cogimon.getModel("cogimon")
 cogimon.configure()
 
-var array left = array(0.05, -0.2, 0.0, 0.5, -0.2, -0.05)
-var array right = array(-0.05, -0.2, 0.0, 0.5, -0.2, 0.05)
+#var array left = array(0.05, -0.2, 0.0, 0.5, -0.2, -0.05)
+#var array right = array(-0.05, -0.2, 0.0, 0.5, -0.2, 0.05)
+
+#var array left = array(0.0, -0.5, 0.0, 0.9, -0.4, 0.0)
+#var array right = array(0.0,-0.5, 0.0, 0.9, -0.4, 0.0)
+var array left = array(0.0, -0.7, 0.0, 1.2, -0.5, 0.0)
+var array right = array(0.0,-0.7, 0.0, 1.2, -0.5, 0.0)
 cogimon.setInitialPosition("left_leg", left)
 cogimon.setInitialPosition("right_leg", right)
 
@@ -47,7 +52,8 @@ loadComponent("cogimon_orocos_opensot_ik","orocos_opensot_ik")
 
 addPeer("cogimon_orocos_opensot_ik", "cogimon")
 cogimon_orocos_opensot_ik.attachToRobot("cogimon")
-var string config_path = os.getenv("ROBOTOLOGY_ROOT") + "/configs/ADVR_shared/cogimon/configs/config_cogimon.yaml"
+var string config_path = os.getenv("ROBOTOLOGY_ROOT") + "/external/orocos_opensot_ik/config/cogimon_example.yaml"
+#var string config_path = os.getenv("ROBOTOLOGY_ROOT") + "/configs/ADVR_shared/cogimon/configs/config_cogimon.yaml"
 cogimon_orocos_opensot_ik.loadConfig(config_path)
 cogimon_orocos_opensot_ik.configure()
 #cogimon_orocos_opensot_ik.start()

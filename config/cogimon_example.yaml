@@ -1,0 +1,38 @@
+XBotCore:
+  config_path: "configs/ADVR_shared/cogimon/configs/cogimon.yaml"
+
+XBotInterface:
+  urdf_path: "robots/iit-cogimon-ros-pkg/cogimon_urdf/urdf/cogimon.urdf"
+  srdf_path: "robots/iit-cogimon-ros-pkg/cogimon_srdf/srdf/cogimon.srdf"
+  joint_map_path: "configs/ADVR_shared/cogimon/joint_map/cogimon_joint_map.yaml"
+
+RobotInterface:
+  framework_name: "OROCOS"
+
+ModelInterface:
+  model_type: "RBDL"
+  is_model_floating_base: "true"
+  
+#MasterCommunicationInterface:
+#  framework_name: "ROS"
+
+#XBotRTPlugins:
+#  plugins: ["HomingExample", "Poses", "chengxu_walking"]
+#  io_plugins: []
+  
+#NRTPlugins:
+#  plugins: []
+  
+#TransmissionPlugins:
+#  plugins: ["CogimonAnkles"]  
+  
+#WebServer:
+#  enable: "true"
+#  address: "127.0.0.1"
+#  port: "8081"
+
+#SimulationOptions:
+#  verbose_mode: "false"
+
+#JointConfiguration: ["home", "home_2"]
+#JointConfigurationTime: ["5.0", "5.0"]
