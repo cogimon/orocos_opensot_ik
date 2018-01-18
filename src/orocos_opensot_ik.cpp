@@ -17,14 +17,13 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
     RTT::TaskContext(name),
     _config_path(""),
     _robot_name(""),
-    _q(),
-    _dq(),
-    _ddq(),
+    _tau(),
     _model_loaded(false),
     _ports_loaded(false),
     Zero(4,4),
     _step_height(0.08),
-    _compute_fb(false)
+    _compute_fb(false),
+    _change_control_mode(true)
 {
     _logger = XBot::MatLogger::getLogger("/tmp/orocos_opensot_ik");
 
@@ -47,66 +46,51 @@ void orocos_opensot_ik::setWorld(const KDL::Frame& l_sole_T_Waist, Eigen::Vector
 
 bool orocos_opensot_ik::startHook()
 {
-#if GROUND_TRUTH_GAZEBO
-    _task_peer_ptr.reset(this->getPeer(_robot_name));
 
-    if(!_task_peer_ptr){
-        RTT::log(RTT::Error)<<"Can not getPeer("<<_robot_name<<")"<<RTT::endlog();
-        return false;}
-    getLinkPoseGazebo = _task_peer_ptr->getOperation("getLinkPoseGazebo");
+_task_peer_ptr.reset(this->getPeer(_robot_name));
+
+if(!_task_peer_ptr){
+    RTT::log(RTT::Error)<<"Can not getPeer("<<_robot_name<<")"<<RTT::endlog();
+    return false;}
+
+#if GROUND_TRUTH_GAZEBO
+    getLinkPoseVelocityGazebo = _task_peer_ptr->getOperation("getLinkPoseVelocityGazebo");
 #endif
 
 
     _joystik_port.createStream(rtt_roscomm::topic("joy"));
 
-    _q.setZero(_model->getJointNum());
-    _dq.setZero(_model->getJointNum());
-    _ddq.setZero(_model->getJointNum());
+    _tau.setZero(_model->getJointNum());
 
     _qm.setZero(_robot->getJointNum());
     _dqm.setZero(_robot->getJointNum());
     _taum.setZero(_robot->getJointNum());
 
-    std::cout<<"_qm: "<<_qm<<std::endl;
-
-    sense(_qm ,_dqm,_taum);
-    _q.segment(6,_qm.size()) = _qm;
-    _dq.segment(6,_dqm.size()) = _dqm;
-
-    std::cout<<"_q: "<<_q<<std::endl;
-
-    _model->setJointPosition(_q);
-    _model->setJointVelocity(_dq);
-    _model->update();
-
-    std::cout<<"Mass: "<<_model->getMass()<<std::endl;
 
     //Update world according this new configuration:
-    KDL::Frame l_sole_T_Waist;
-    _model->getPose("Waist", "l_sole", l_sole_T_Waist);
+//    KDL::Frame l_sole_T_Waist;
+//    _model->getPose("Waist", "l_sole", l_sole_T_Waist);
 
-    l_sole_T_Waist.p.x(0.0);
-    l_sole_T_Waist.p.y(0.0);
+//    l_sole_T_Waist.p.x(0.0);
+//    l_sole_T_Waist.p.y(0.0);
 
-    this->setWorld(l_sole_T_Waist, _q);
+    //this->setWorld(l_sole_T_Waist, _q);
+
+    sense(_qm ,_dqm,_taum);
+
+    //#if GROUND_TRUTH_GAZEBO
+        Eigen::Affine3d fb_pose;
+        Eigen::Vector6d fb_twist;
+        FloatingBaseFromGazebo(fb_pose, fb_twist);
+        _logger->add("Q_gazebo", fb_pose.matrix());
+        _logger->add("Qdot_gazebo", fb_twist);
+
+        _model->setFloatingBaseState(fb_pose, fb_twist );
+        _model->update();
+    //#endif
 
 
-    std::cout<<"_q: "<<_q<<std::endl;
 
-
-    std::vector<std::string> contacts;
-    contacts.push_back("l_sole");
-    contacts.push_back("r_sole");
-    XBot::ImuSensor::ConstPtr imu;
-    _model_m->setJointPosition(_q);
-    _model_m->setJointVelocity(_dq);
-    fb.reset(
-        new OpenSoT::floating_base_estimation::qp_estimation(_model_m, imu, contacts));
-
-    _model->getJointPosition(_q);
-    _model->getJointVelocity(_dq);
-    std::cout<<"_q: "<<_q<<std::endl;
-    std::cout<<"_dq: "<<_dq<<std::endl;
 
     foot_size<<0.2,0.1;//0.2,0.1;
     std::cout<<"foot_size: "<<foot_size<<std::endl;
@@ -114,7 +98,7 @@ bool orocos_opensot_ik::startHook()
     Eigen::Affine3d tmp;
     _model->getPose("l_ankle", "l_sole", tmp);
 
-    ik.reset(new opensot_ik(_q, _model, this->getPeriod(), fabs(tmp(2,3)), foot_size));
+    ik.reset(new opensot_ik(_model, this->getPeriod(), fabs(tmp(2,3)), foot_size));
 
 
 
@@ -133,68 +117,61 @@ bool orocos_opensot_ik::startHook()
     next_state = _wpg->getCurrentState();
     integrator.set(_wpg->getCurrentState(), next_state, _wpg->getDuration(), this->getPeriod());
 
-    Eigen::Vector3d com;
-    _model->getCOM(com);
-    Eigen::Affine3d waist;
-    _model->getPose("Waist", waist);
-
-    offset = -com + waist.translation();
-
-    _Qik.setZero(_q.size());
-    _dQik.setZero(_q.size());
-    _Qik<<_q.segment(0,6),_qm;
-    _dQik<<_dq.segment(0,6),_dqm;
-
-
-#if GROUND_TRUTH_GAZEBO
-    Eigen::Affine3d fb_pose;
-    logFloatingBaseFromGazebo(fb_pose);
-    _logger->add("Q_gazebo", fb_pose.matrix());
-    _fb_offset = waist*fb_pose.inverse();
-    RTT::log(RTT::Info)<<"_fb_offset: \n"<<_fb_offset.matrix()<<RTT::endlog();
-#endif
 
     return true;
 }
 
-#if GROUND_TRUTH_GAZEBO
-void orocos_opensot_ik::logFloatingBaseFromGazebo(Eigen::Affine3d& fb_pose)
+//#if GROUND_TRUTH_GAZEBO
+void orocos_opensot_ik::FloatingBaseFromGazebo(Eigen::Affine3d& fb_pose,
+                                               Eigen::Vector6d& fb_twist)
 {
-    rstrt::geometry::Pose _base_link_pose_gazebo = getLinkPoseGazebo("base_link");
-    Eigen::Quaterniond quat(_base_link_pose_gazebo.rotation.rotation[0],
-                           _base_link_pose_gazebo.rotation.rotation[1],
-                           _base_link_pose_gazebo.rotation.rotation[2],
-                           _base_link_pose_gazebo.rotation.rotation[3]);
-    Eigen::Affine3d tmp;
-    tmp.linear() = quat.toRotationMatrix();
-    tmp.translation() = _base_link_pose_gazebo.translation.translation.cast<double>();
-    fb_pose = tmp;
+    rstrt::kinematics::Twist twist;
+    rstrt::geometry::Pose pose;
+    if(!getLinkPoseVelocityGazebo("base_link", pose, twist))
+        RTT::log(RTT::Error)<<"Can not get floating base from gazebo"<<RTT::endlog();
+
+    Eigen::Quaterniond quat(pose.rotation.rotation[0],
+                           pose.rotation.rotation[1],
+                           pose.rotation.rotation[2],
+                           pose.rotation.rotation[3]);
+    fb_pose.linear() = quat.toRotationMatrix();
+    fb_pose.translation() = pose.translation.translation.cast<double>();
+
+    fb_twist[0] = twist.linear[0];
+    fb_twist[1] = twist.linear[1];
+    fb_twist[2] = twist.linear[2];
+
+
+    fb_twist[3] = twist.angular[0];
+    fb_twist[4] = twist.angular[1];
+    fb_twist[5] = twist.angular[2];
 }
-#endif
+//#endif
+
+
 
 void orocos_opensot_ik::updateHook()
 {
-#if GROUND_TRUTH_GAZEBO
-    Eigen::Affine3d fb_pose;
-    logFloatingBaseFromGazebo(fb_pose);
-    _logger->add("Q_gazebo", (_fb_offset*fb_pose).matrix());
-#endif
 
-    _logger->add("q", _q);
-    _logger->add("dq", _dq);
-    sense(_qm,_dqm, _taum);
+//#if GROUND_TRUTH_GAZEBO
+    Eigen::Affine3d fb_pose;
+    Eigen::Vector6d fb_twist;
+    FloatingBaseFromGazebo(fb_pose, fb_twist);
+    _logger->add("Q_gazebo", fb_pose.matrix());
+    _logger->add("Qdot_gazebo", fb_twist);
+//#endif
+
+     sense(_qm,_dqm, _taum);
+
+    _model->setFloatingBaseState(fb_pose, fb_twist);
+    _model->update();
+
+
     _logger->add("qm", _qm);
     _logger->add("dqm", _dqm);
     _logger->add("taum", _taum);
 
-    _Qik<<_Qik.segment(0,6),_qm;
-    _dQik<<_dQik.segment(0,6),_dqm;
-    _model_m->setJointPosition(_Qik);
-    _model_m->setJointVelocity(_dQik);
-    //_model_m->update();
 
-//    _q.segment(6, _qm.size()) = _qm;
-//    _dq.segment(6, _dqm.size()) = _dqm;
 
 
     RTT::FlowStatus fs = _joystik_port.read(joystik_msg);
@@ -227,69 +204,56 @@ void orocos_opensot_ik::updateHook()
     }
     integrator.Tick();
     _out = integrator.Output();
-    //_out.com.pos += offset;
-    ik->setWalkingReferences(_out, _robot->getForceTorque());
+
+    //ik->setWalkingReferences(_out, _robot->getForceTorque());
     integrator.Output().log(_logger, "integrator");
     _out.log(_logger, "integrator_stabilized");
 
-    Eigen::Vector6d left_wrench;
-    _robot->getForceTorque().at("l_leg_ft")->getWrench(left_wrench);
-    Eigen::Vector6d right_wrench;
-    _robot->getForceTorque().at("r_leg_ft")->getWrench(right_wrench);
-    if(left_wrench[2] >= 20.){
-        fb->setContactState("l_sole", true);
-        _compute_fb = true;
-    }
-    else{
-        _compute_fb = false;
-        fb->setContactState("l_sole", false);
-    }
-    if(right_wrench[2] >= 20.){
-        fb->setContactState("r_sole", true);
-        _compute_fb = true;
-    }
-    else{
-        _compute_fb = false;
-        fb->setContactState("r_sole", false);
-    }
 
-    _model->setJointPosition(_q);
-    _model->setJointVelocity(_dq);
-    _model->update();
-
-    if(_compute_fb){
-        if(!fb->update(this->getPeriod()))
-            std::cout<<"fb QP can not solve"<<std::endl;
-        _compute_fb = false;}
-    fb->log(_logger);
-    _model_m->getJointPosition(_Qik);
-    _model_m->getJointVelocity(_dQik);
-
-
-
-
-    ik->stack->update(_q);
+    Eigen::VectorXd useless(1);
+    ik->stack->update(useless);
     ik->stack->log(_logger);
 
-    if(!ik->iHQP->solve(_ddq)){
-        _ddq.setZero(_ddq.size());
-        std::cout<<"iHQP can not solve"<<std::endl;}
+    Eigen::VectorXd x(_model->getJointNum() + 12);
+    if(!ik->iHQP->solve(x)){
+        RTT::log(RTT::Error)<<"iHQP can not solve"<<RTT::endlog();}
 
+    Eigen::VectorXd qddot_value(_model->getJointNum());
+    ik->qddot.getValue(x, qddot_value);
+    _logger->add("qddot_value", qddot_value);
+    Eigen::Vector6d left_wrench_value, right_wrench_value;
+    ik->legs_wrench[0].getValue(x, left_wrench_value);
+    ik->legs_wrench[1].getValue(x, right_wrench_value);
+    _logger->add("left_wrench_value", left_wrench_value);
+    _logger->add("right_wrench_value", right_wrench_value);
+    _model->setJointAcceleration(qddot_value);
+    _model->update();
+    Eigen::MatrixXd Jc1, Jc2;
+    _model->getJacobian("l_sole", Jc1);
+    _model->getJacobian("r_sole", Jc2);
+    _model->computeInverseDynamics(_tau);
+    _tau -= (Jc1.transpose()*left_wrench_value + Jc2.transpose()*right_wrench_value);
+    _logger->add("tau", _tau);
 
-//    _dQik += _ddq.segment(0,6)*this->getPeriod();
-//    _Qik += _dQik*this->getPeriod() + 0.5*_ddq.segment(0,6)*(this->getPeriod()*this->getPeriod());
-//    _logger->add("_dQik", _dQik);
-//    _logger->add("_Qik", _Qik);
+    for(unsigned int i = 0; i < 6; ++i)
+    {
+        if(fabs(_tau[i]) > 10e-3){
+            RTT::log(RTT::Error)<<"Floating Base Wrench is not 0!"<<RTT::endlog();
+            RTT::log(RTT::Error)<<"_tau #"<<i<<": "<<_tau[i]<<RTT::endlog();}
+    }
 
-//    _dq.segment(6,_dq.size()-6) += _ddq.segment(6,_dq.size()-6)*this->getPeriod();
-//    _q.segment(6,_dq.size()-6) += _dq.segment(6,_dq.size()-6)*this->getPeriod() +
-//            0.5*_ddq.segment(6,_dq.size()-6)*(this->getPeriod()*this->getPeriod());
-    _dq += _ddq*this->getPeriod();
-    _q += _dq*this->getPeriod() + 0.5*_ddq*(this->getPeriod()*this->getPeriod());
+    if(_change_control_mode)
+    {
+        RTT::OperationCaller<bool(const std::string&, const std::string&)> setControlMode =
+                _task_peer_ptr->getOperation("setControlMode");
 
+        setControlMode("left_leg", "JointTorqueCtrl");
+        setControlMode("right_leg", "JointTorqueCtrl");
+        setControlMode("torso", "JointTorqueCtrl");
+        _change_control_mode = false;
+    }
 
-    move(_q.segment(6,_q.size()-6));
-
+    move(_tau.tail(_model->getActuatedJointNum()));
 
 }
 

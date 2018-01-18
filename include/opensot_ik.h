@@ -13,6 +13,8 @@
 
 #include <compliant_stabilizer/compliantstabilizer.h>
 
+#include <OpenSoT/constraints/acceleration/DynamicFeasibility.h>
+
 using namespace OpenSoT::tasks::acceleration;
 using namespace OpenSoT::constraints;
 using namespace OpenSoT;
@@ -21,7 +23,7 @@ using namespace OpenSoT::solvers;
 class opensot_ik
 {
 public:
-    opensot_ik(const Eigen::VectorXd& q, const XBot::ModelInterface::Ptr model,
+    opensot_ik(const XBot::ModelInterface::Ptr model,
                const double dT, const double ankle_height,
                const Eigen::Vector2d& foot_size);
 
@@ -34,9 +36,12 @@ public:
     CoM::Ptr com;
     Postural::Ptr postural;
 
+
+
+
     double _dT;
 
-    GenericConstraint::Ptr joint_acc_lims;
+    GenericConstraint::Ptr x_lims;
 
     AutoStack::Ptr stack;
 
@@ -47,6 +52,10 @@ public:
 
     CompliantStabilizer stabilizer;
     Vector3d olddelta;
+
+    AffineHelper qddot;
+    std::vector<AffineHelper> legs_wrench;
+
 };
 
 

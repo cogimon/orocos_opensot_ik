@@ -15,7 +15,6 @@ bool orocos_opensot_ik::attachToRobot(const std::string &robot_name, const std::
         return false;}
 
     _model = XBot::ModelInterface::getModel(config_path);
-    _model_m = XBot::ModelInterface::getModel(config_path);;
     if(!_model){
         RTT::log(RTT::Error)<<"ERROR!!! _model is invalid pointer"<<RTT::endlog();
         return false;}
@@ -26,7 +25,7 @@ bool orocos_opensot_ik::attachToRobot(const std::string &robot_name, const std::
 
 void orocos_opensot_ik::move(const Eigen::VectorXd& q)
 {
-    _robot->setPositionReference(q);
+    _robot->setEffortReference(q);
     _robot->move();
 }
 
@@ -36,6 +35,8 @@ void orocos_opensot_ik::sense(Eigen::VectorXd &q, VectorXd &dq, Eigen::VectorXd 
     _robot->getJointPosition(q);
     _robot->getJointVelocity(dq);
     _robot->getJointEffort(tau);
+
+    _model->syncFrom(*_robot);
 }
 
 bool orocos_opensot_ik::configureHook()

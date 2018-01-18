@@ -22,6 +22,7 @@
 
 #include <joystick_handler.h>
 #include <rst-rt/geometry/Pose.hpp>
+#include <rst-rt/kinematics/Twist.hpp>
 
 #define GROUND_TRUTH_GAZEBO true
 
@@ -48,29 +49,21 @@ private:
 
     XBot::ModelInterface::Ptr _model;
     XBot::RobotInterface::Ptr _robot;
-    XBot::ModelInterface::Ptr _model_m;
 
     bool _model_loaded;
     bool _ports_loaded;
 
-    Eigen::VectorXd _q;
     Eigen::VectorXd _qm;
     Eigen::VectorXd _dqm;
     Eigen::VectorXd _taum;
-    Eigen::VectorXd _dq;
-    Eigen::VectorXd _ddq;
 
-    Eigen::VectorXd _Qik;
-    Eigen::VectorXd _dQik;
 
     boost::shared_ptr<opensot_ik> ik;
-    boost::shared_ptr<OpenSoT::floating_base_estimation::qp_estimation> fb;
 
     RTT::InputPort<sensor_msgs::Joy> _joystik_port;
     sensor_msgs::Joy joystik_msg;
     joystick_handler joystick;
 
-    Eigen::Vector6d centroidal_momentum;
     Eigen::Vector6d desired_twist;
     Eigen::Vector3d zero3;
     Eigen::MatrixXd Zero;
@@ -98,10 +91,15 @@ private:
 
     bool _compute_fb;
 
+    bool _change_control_mode;
+
+    Eigen::VectorXd _tau;
+
 //#if GROUND_TRUTH_GAZEBO
-    void logFloatingBaseFromGazebo(Eigen::Affine3d& fb_pose);
+    void FloatingBaseFromGazebo(Eigen::Affine3d& fb_pose, Eigen::Vector6d& fb_twist);
     Eigen::Affine3d _fb_offset;
-    RTT::OperationCaller<rstrt::geometry::Pose(const std::string&)> getLinkPoseGazebo;
+    RTT::OperationCaller<bool(const std::string&, rstrt::geometry::Pose&,
+                              rstrt::kinematics::Twist&)> getLinkPoseVelocityGazebo;
     boost::shared_ptr<TaskContext> _task_peer_ptr;
 //#endif
 };
