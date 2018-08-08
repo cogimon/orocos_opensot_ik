@@ -1,0 +1,53 @@
+#!/usr/bin/env deployer
+
+import("eigen_typekit")
+import("kdl_typekit")
+import("rst-rt_typekit")
+import("XBotOrocosRTT")
+require("os")
+
+#####TEST#####
+import("rtt_roscomm")
+import("rtt_std_srvs")
+##############
+
+#os.execute("xterm -hold -e XBotCore -DV --period 3000 &")
+#os.execute("xterm -hold -e XBotCore -V &")
+
+loadComponent("cogimon","XBot::OrocosRTT")
+setPeriodicActivity("cogimon",0.002,30,ORO_SCHED_RT)
+
+#setPeriodicActivity("cogimon",0.005,30,ORO_SCHED_OTHER)
+
+
+cogimon.configure()
+##cogimon.startXBotRTCommunication()
+
+##os.execute("sleep 2")
+
+##cogimon.start()
+
+## TEST
+var string urdf_path = os.getenv("ROBOTOLOGY_ROOT") + "/configs/ADVR_shared/cogimon/urdf/cogimon.urdf"
+var string srdf_path = os.getenv("ROBOTOLOGY_ROOT") + "/configs/ADVR_shared/cogimon/srdf/cogimon.srdf"
+
+import("RobotInterfaceOROCOS")
+##loadComponent("homing", "orocos_test_homing")
+##setPeriodicActivity("homing",0.01,30,ORO_SCHED_RT)
+
+##addPeer("homing", "cogimon")
+##homing.attachToRobot("cogimon", urdf_path, srdf_path)
+
+## OROCOS_OPENSOT_IK
+import("rtt_ros")
+import("rtt_rosnode")
+import("rtt_sensor_msgs")
+import("orocos_opensot_ik")
+
+loadComponent("cogimon_orocos_opensot_ik","orocos_opensot_ik")
+setPeriodicActivity("cogimon_orocos_opensot_ik",0.002,20,ORO_SCHED_OTHER)
+
+addPeer("cogimon_orocos_opensot_ik", "cogimon")
+var string config_path = os.getenv("ROBOTOLOGY_ROOT") + "/external/orocos_opensot_ik/config/cogimon_example.yaml"
+cogimon_orocos_opensot_ik.attachToRobot("cogimon", config_path)
+cogimon_orocos_opensot_ik.configure()

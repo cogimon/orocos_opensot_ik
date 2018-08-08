@@ -26,7 +26,7 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
 {
     _logger = XBot::MatLogger::getLogger("/tmp/orocos_opensot_ik");
 
-    this->setActivity(new RTT::Activity(1, 0.002));
+    //this->setActivity(new RTT::Activity(1, 0.002));
 
     this->addOperation("attachToRobot", &orocos_opensot_ik::attachToRobot,
                 this, RTT::ClientThread);
@@ -83,7 +83,7 @@ bool orocos_opensot_ik::startHook()
     Eigen::Affine3d tmp;
     _model->getPose("l_ankle", "l_sole", tmp);
 
-    ik.reset(new opensot_ik(_q, _model, this->getPeriod(), fabs(tmp(2,3)), foot_size));
+    ik.reset(new opensot_ik(_q, _model, 0.002, fabs(tmp(2,3)), foot_size));
 
 
 
@@ -186,7 +186,7 @@ void orocos_opensot_ik::updateHook()
     move(_q.segment(6,_qm.size()));
 
     RTT::os::TimeService::Seconds time = RTT::os::TimeService::Instance()->secondsSince(start);
-
+    _logger->add("t", time);
 //    RTT::log(RTT::Info)<<time<<RTT::endlog();
 }
 
