@@ -71,7 +71,7 @@ opensot_ik::opensot_ik(const Eigen::VectorXd &q,
 
 
 //      iHQP.reset(new QPOases_sot(stack->getStack(), stack->getBounds(),capture_point, 1e5));
-    iHQP.reset(new QPOases_sot(stack->getStack(), stack->getBounds(), 1e10));
+    iHQP = boost::make_shared<OpenSoT::solvers::iHQP>(stack->getStack(), stack->getBounds(), 1e10);
 
 
 

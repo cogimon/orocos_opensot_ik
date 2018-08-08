@@ -9,7 +9,7 @@
 #include <OpenSoT/constraints/velocity/CartesianPositionConstraint.h>
 //#include <OpenSoT/constraints/velocity/CapturePoint.h>
 #include <OpenSoT/utils/AutoStack.h>
-#include <OpenSoT/solvers/QPOases.h>
+#include <OpenSoT/solvers/iHQP.h>
 #include <OpenSoT/SubTask.h>
 #include <mpcqp_walking/walker.h>
 #include <rst-rt/dynamics/Wrench.hpp>
@@ -46,7 +46,7 @@ public:
 
     AutoStack::Ptr stack;
 
-    QPOases_sot::Ptr iHQP;
+    OpenSoT::solvers::iHQP::Ptr iHQP;
 
     Eigen::VectorXd desired_twist;
     Eigen::MatrixXd desired_pose;
