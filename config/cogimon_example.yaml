@@ -2,8 +2,8 @@ XBotCore:
   config_path: "configs/ADVR_shared/cogimon/configs/cogimon.yaml"
 
 XBotInterface:
-  urdf_path: "robots/iit-cogimon-ros-pkg/cogimon_urdf/urdf/cogimon.urdf"
-  srdf_path: "robots/iit-cogimon-ros-pkg/cogimon_srdf/srdf/cogimon.srdf"
+  urdf_path: "configs/ADVR_shared/cogimon/urdf/cogimon.urdf"
+  srdf_path: "configs/ADVR_shared/cogimon/srdf/cogimon.srdf"
   joint_map_path: "configs/ADVR_shared/cogimon/joint_map/cogimon_joint_map.yaml"
 
 RobotInterface:

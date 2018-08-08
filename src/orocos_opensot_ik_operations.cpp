@@ -1,11 +1,12 @@
 #include <orocos_opensot_ik.h>
 #include <RobotInterfaceOROCOS/RobotInterfaceOROCOS.h>
 
-bool orocos_opensot_ik::attachToRobot(const std::string &robot_name, const std::string &config_path)
+bool orocos_opensot_ik::attachToRobot(const std::string &robot_name, const std::string &urdf_path, const std::string &srdf_path, const std::string &config_path  )
 {
-    _ports_loaded =  XBot::RobotInterfaceOROCOS::attachToRobot(robot_name, config_path,
-        _robot, std::shared_ptr<RTT::TaskContext>(this));
-
+    //_ports_loaded =  XBot::RobotInterfaceOROCOS::attachToRobot(robot_name, config_path,
+    //    _robot, std::shared_ptr<RTT::TaskContext>(this));
+    _ports_loaded = XBot::RobotInterfaceOROCOS::attachToRobot(robot_name, urdf_path, srdf_path, true, "RBDL","",
+            						      _robot, std::shared_ptr<RTT::TaskContext>(this));
     if(!_ports_loaded){
         RTT::log(RTT::Error)<<"ERROR!!! attachToRobot returned false"<<RTT::endlog();
         return false;}
@@ -13,10 +14,11 @@ bool orocos_opensot_ik::attachToRobot(const std::string &robot_name, const std::
         RTT::log(RTT::Error)<<"ERROR!!! _robot is invalid pointer"<<RTT::endlog();
         return false;}
 
-    _model = XBot::ModelInterface::getModel(config_path);
-    if(!_model){
-        RTT::log(RTT::Error)<<"ERROR!!! _model is invalid pointer"<<RTT::endlog();
-        return false;}
+    //_model = XBot::ModelInterface::getModel(config_path);
+    //if(!_model){
+    //    RTT::log(RTT::Error)<<"ERROR!!! _model is invalid pointer"<<RTT::endlog();
+    //    return false;
+    // }
 
     _model_loaded = true;
     return true;

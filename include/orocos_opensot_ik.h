@@ -32,7 +32,7 @@ public:
     void cleanupHook();
 private:
 
-    bool attachToRobot(const std::string &robot_name, const std::string &config_path);
+    bool attachToRobot(const std::string &robot_name, const std::string &urdf_path, const std::string &srdf_path, const std::string & config_path);
     void sense(Eigen::VectorXd& q, Eigen::VectorXd& tau);
     void move(const Eigen::VectorXd& q);
     void setReferences(const sensor_msgs::Joy& msg);

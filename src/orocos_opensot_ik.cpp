@@ -39,17 +39,17 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
 
 void orocos_opensot_ik::setWorld(const KDL::Frame& l_sole_T_Waist, Eigen::VectorXd& q)
 {
-    _model->setFloatingBasePose(l_sole_T_Waist);
-    _model->update();
-    _model->getJointPosition(q);
+    _robot->model().setFloatingBasePose(l_sole_T_Waist);
+    _robot->model().update();
+    _robot->model().getJointPosition(q);
 }
 
 bool orocos_opensot_ik::startHook()
 {
     _joystik_port.createStream(rtt_roscomm::topic("joy"));
 
-    _q.setZero(_model->getJointNum());
-    _dq.setZero(_model->getJointNum());
+    _q.setZero(_robot->model().getJointNum());
+    _dq.setZero(_robot->model().getJointNum());
 
     _qm.setZero(_robot->getJointNum());
     _taum.setZero(_robot->getJointNum());
@@ -61,15 +61,15 @@ bool orocos_opensot_ik::startHook()
 
     std::cout<<"_q: "<<_q<<std::endl;
 
-    _model->setJointPosition(_q);
-    _model->setJointVelocity(_dq);
-    _model->update();
+    _robot->model().setJointPosition(_q);
+    _robot->model().setJointVelocity(_dq);
+    _robot->model().update();
 
-    std::cout<<"Mass: "<<_model->getMass()<<std::endl;
+    std::cout<<"Mass: "<<_robot->model().getMass()<<std::endl;
 
     //Update world according this new configuration:
     KDL::Frame l_sole_T_Waist;
-    _model->getPose("Waist", "l_sole", l_sole_T_Waist);
+    _robot->model().getPose("Waist", "l_sole", l_sole_T_Waist);
 
     l_sole_T_Waist.p.x(0.0);
     l_sole_T_Waist.p.y(0.0);
@@ -81,9 +81,9 @@ bool orocos_opensot_ik::startHook()
     std::cout<<"foot_size: "<<foot_size<<std::endl;
 
     Eigen::Affine3d tmp;
-    _model->getPose("l_ankle", "l_sole", tmp);
+    _robot->model().getPose("l_ankle", "l_sole", tmp);
 
-    ik.reset(new opensot_ik(_q, _model, this->getPeriod(), fabs(tmp(2,3)), foot_size));
+    ik.reset(new opensot_ik(_q, std::shared_ptr<XBot::ModelInterface>(&_robot->model()), this->getPeriod(), fabs(tmp(2,3)), foot_size));
 
 
 
@@ -92,7 +92,7 @@ bool orocos_opensot_ik::startHook()
     double __dT = this->getPeriod()*relative_activity;
     std::cout<<"__dT: "<<__dT<<std::endl;
     update_counter = 1;
-    _wpg.reset(new legged_robot::Walker(*_model, __dT, 1., 0.3, //1.5, 0.6//1., 0.3
+    _wpg.reset(new legged_robot::Walker(_robot->model(), __dT, 1., 0.3, //1.5, 0.6//1., 0.3
                                         foot_size,
                                         "l_sole", "r_sole", "Waist",
                                         3,
@@ -103,9 +103,9 @@ bool orocos_opensot_ik::startHook()
     integrator.set(_wpg->getCurrentState(), next_state, _wpg->getDuration(), this->getPeriod());
 
     Eigen::Vector3d com;
-    _model->getCOM(com);
+    _robot->model().getCOM(com);
     Eigen::Affine3d waist;
-    _model->getPose("Waist", waist);
+    _robot->model().getPose("Waist", waist);
 
     offset = -com + waist.translation();
 
@@ -141,11 +141,11 @@ void orocos_opensot_ik::updateHook()
         _wpg->setReference(desired_twist.segment(0,2));
     }
 
-    _model->setJointPosition(_q);
-    _model->setJointVelocity(_dq/this->getPeriod());
-    _model->update();
+    _robot->model().setJointPosition(_q);
+    _robot->model().setJointVelocity(_dq/this->getPeriod());
+    _robot->model().update();
 
-    logRobot(_model);
+    logRobot(std::shared_ptr<XBot::ModelInterface>(&_robot->model()));
 
     if(update_counter == relative_activity)
     {
