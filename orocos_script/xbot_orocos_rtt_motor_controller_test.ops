@@ -11,7 +11,8 @@ import("rtt_roscomm")
 import("rtt_std_srvs")
 ##############
 
-os.execute("xterm -hold -e XBotCore -DV --period 3000 &")
+#os.execute("xterm -hold -e XBotCore -DV --period 3000 &")
+os.execute("xterm -hold -e XBotCore -V &")
 
 loadComponent("cogimon","XBot::OrocosRTT")
 setPeriodicActivity("cogimon",0.001,30,ORO_SCHED_RT)
