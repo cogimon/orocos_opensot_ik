@@ -22,7 +22,7 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
     _model_loaded(false),
     _ports_loaded(false),
     Zero(4,4),
-    _step_height(0.08)
+    _step_height(0.05)
 {
     _logger = XBot::MatLogger::getLogger("/tmp/orocos_opensot_ik");
 
@@ -92,7 +92,7 @@ bool orocos_opensot_ik::startHook()
     double __dT = this->getPeriod()*relative_activity;
     std::cout<<"__dT: "<<__dT<<std::endl;
     update_counter = 1;
-    _wpg.reset(new legged_robot::Walker(*_model, __dT, 1.5, 0.6, //1.5, 0.6//1., 0.3
+    _wpg.reset(new legged_robot::Walker(*_model, __dT, 1., 0.3, //1.5, 0.6//1., 0.3
                                         foot_size,
                                         "l_sole", "r_sole", "Waist",
                                         3,
@@ -147,11 +147,6 @@ void orocos_opensot_ik::updateHook()
 
     logRobot(_model);
 
-    Eigen::Vector6d L;
-    _model->getCentroidalMomentum(L);
-    _logger->add("angular_mom", L.segment(3,3));
-    ik->mom->setReference(this->getPeriod()*L.segment(3,3));
-
     if(update_counter == relative_activity)
     {
         _wpg->setCurrentState(next_state);
@@ -192,7 +187,7 @@ void orocos_opensot_ik::updateHook()
 
     RTT::os::TimeService::Seconds time = RTT::os::TimeService::Instance()->secondsSince(start);
 
-    //RTT::log(RTT::Info)<<time<<RTT::endlog();
+//    RTT::log(RTT::Info)<<time<<RTT::endlog();
 }
 
 void orocos_opensot_ik::stopHook()

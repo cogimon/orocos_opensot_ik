@@ -3,7 +3,7 @@
 
 #include <OpenSoT/tasks/velocity/CoM.h>
 #include <OpenSoT/tasks/velocity/Cartesian.h>
-#include <OpenSoT/tasks/velocity/AngularMomentum.h>
+#include <OpenSoT/tasks/velocity/Postural.h>
 #include <OpenSoT/constraints/velocity/JointLimits.h>
 #include <OpenSoT/constraints/velocity/VelocityLimits.h>
 #include <OpenSoT/constraints/velocity/CartesianPositionConstraint.h>
@@ -34,10 +34,13 @@ public:
     Cartesian::Ptr left_leg;
     Cartesian::Ptr right_leg;
     Cartesian::Ptr waist;
+
+    Cartesian::Ptr left_arm;
+    Cartesian::Ptr right_arm;
+
     CoM::Ptr com;
-//    CapturePointConstraint::Ptr capture_point;
-    CartesianPositionConstraint::Ptr com_z;
-    AngularMomentum::Ptr mom;
+
+    Postural::Ptr postural;
 
     double _dT;
 
