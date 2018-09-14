@@ -22,7 +22,7 @@ orocos_opensot_ik::orocos_opensot_ik(std::string const & name):
     _model_loaded(false),
     _ports_loaded(false),
     Zero(4,4),
-    _step_height(0.05)
+    _step_height(0.05)//0.05
 {
     _logger = XBot::MatLogger::getLogger("/tmp/orocos_opensot_ik");
 
@@ -92,11 +92,13 @@ bool orocos_opensot_ik::startHook()
     double __dT = this->getPeriod()*relative_activity;
     std::cout<<"__dT: "<<__dT<<std::endl;
     update_counter = 1;
-    _wpg.reset(new legged_robot::Walker(*_model, __dT, 1., 0.3, //1.5, 0.6//1., 0.3
+    _wpg.reset(new legged_robot::Walker(*_model, __dT, 0.8, 0.3, //1.5, 0.6//1., 0.3 // walk init param 1. and 0.3
                                         foot_size,
                                         "l_sole", "r_sole", "Waist",
                                         3,
-                                        2e2,2e3,1e3));
+                                        //2e2,2e3,1e3));
+					//2e2,2e3,1e4)); // GOOD FOR POUYA
+					1e-3,1e+1,5e+2)); //GOOD FOR WALKING A LITTLE
     _wpg->setStepHeight(_step_height);
     _wpg->setFootSpan(_wpg->getFootSpan());//0.8
     next_state = _wpg->getCurrentState();

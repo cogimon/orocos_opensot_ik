@@ -21,7 +21,9 @@ opensot_ik::opensot_ik(const Eigen::VectorXd &q,
                10.,
                //getGains(0.1,0.2,0.), getGains(-0.005,-0.005,0.),
                //getGains(0.1,0.1,0.), getGains(-0.005,-0.005,0.),
-               getGains(0.1,0.1, 0.), getGains(-0.005,-0.01,0.),
+               //getGains(0.1,0.1, 0.), getGains(-0.005,-0.01,0.),
+	       //getGains(0.1,0.23, 0.), getGains(-0.005,-0.015,0.),
+		getGains(0.1,0.2, 0.), getGains(-0.005,-0.015,0.),
                getGains(DEFAULT_MaxLimsx, DEFAULT_MaxLimsy, DEFAULT_MaxLimsz),
                getGains(DEFAULT_MinLimsx, DEFAULT_MinLimsy, DEFAULT_MinLimsz))
 {

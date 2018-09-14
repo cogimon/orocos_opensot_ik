@@ -25,4 +25,11 @@ void orocos_opensot_ik::logRobot(const XBot::ModelInterface::Ptr robot)
 
     robot->getPose("Waist", tmp2);
     _logger->add("waist_pos", tmp2.matrix());
+
+    std::map< std::string, XBot::ForceTorqueSensor::ConstPtr > frames_wrenches_map = _robot->getForceTorque();
+    Eigen::Vector6d wrench;
+    frames_wrenches_map.at("l_leg_ft")->getWrench(wrench);
+    _logger->add("l_leg_ft", wrench);
+    frames_wrenches_map.at("r_leg_ft")->getWrench(wrench);
+    _logger->add("r_leg_ft", wrench);
 }
