@@ -23,7 +23,7 @@ opensot_ik::opensot_ik(const Eigen::VectorXd &q,
                //getGains(0.1,0.1,0.), getGains(-0.005,-0.005,0.),
                //getGains(0.1,0.1, 0.), getGains(-0.005,-0.01,0.),
 	       //getGains(0.1,0.23, 0.), getGains(-0.005,-0.015,0.),
-		getGains(0.1,0.2, 0.), getGains(-0.005,-0.015,0.),
+		getGains(0.1,0.23, 0.), getGains(-0.005,-0.02,0.),
                getGains(DEFAULT_MaxLimsx, DEFAULT_MaxLimsy, DEFAULT_MaxLimsz),
                getGains(DEFAULT_MinLimsx, DEFAULT_MinLimsy, DEFAULT_MinLimsz))
 {
@@ -126,7 +126,7 @@ void opensot_ik::setWalkingReferences(legged_robot::AbstractVariable &next_state
     next_state.com.pos += delta_com;
     olddelta=delta_com;
     //next_state.com.vel += (delta_com-olddelta)/_dT;
-    next_state.com.vel += delta_com/_dT;
+    //next_state.com.vel += delta_com/_dT;
     //com->setReference(next_state.com.pos, next_state.com.vel*_dT);
     com->setReference(next_state.com.pos);
 

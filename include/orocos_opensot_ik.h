@@ -84,6 +84,8 @@ private:
 
     legged_robot::AbstractVariable _out;
     Eigen::Vector3d offset;
+
+bool _sync;
 };
 
 #endif
