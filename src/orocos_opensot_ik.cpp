@@ -99,7 +99,7 @@ bool orocos_opensot_ik::startHook()
                                         //2e2,2e3,1e3));
 					//2e2,2e3,1e4)); // GOOD FOR POUYA
 					//1e-3,1e+1,5e+2)); //GOOD FOR WALKING A LITTLE
-					1e-3,1e+1,5e+2));
+					1e-3,1e+1,1e+3));
     _wpg->setStepHeight(_step_height);
     _wpg->setFootSpan(_wpg->getFootSpan());//0.8
     next_state = _wpg->getCurrentState();
@@ -153,9 +153,6 @@ void orocos_opensot_ik::updateHook()
 
     if(update_counter == relative_activity)
     {
-	/////////////////////////
-		//next_state = _out;
-/////////////////////////
 
         _wpg->setCurrentState(next_state);
 
@@ -198,10 +195,7 @@ void orocos_opensot_ik::updateHook()
 //    RTT::log(RTT::Info)<<time<<RTT::endlog();
 
 
-
-
-	//////////////
-//next_state.com = _out.com;
+//////////////
 next_state.zmp = _out.zmp;
 ///////////
 }
@@ -214,6 +208,7 @@ void orocos_opensot_ik::stopHook()
 void orocos_opensot_ik::cleanupHook()
 {
     _logger->flush();
+    ik->stabilizer.flush();
 }
 
 

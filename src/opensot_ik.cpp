@@ -47,6 +47,31 @@ opensot_ik::opensot_ik(const Eigen::VectorXd &q,
     com->setLambda(1.0);
     com->setWeightIsDiagonalFlag(true);
 
+   /* std::vector<bool> active_joint_mask = com->getActiveJointsMask();
+    for(unsigned int i = 0; i < active_joint_mask.size(); ++i)
+	active_joint_mask[i] = true;
+    active_joint_mask[model->getDofIndex("WaistYaw")] = false;	
+    active_joint_mask[model->getDofIndex("WaistLat")] = false;
+    
+    active_joint_mask[model->getDofIndex("RShSag")] = false;
+    active_joint_mask[model->getDofIndex("RShLat")] = false;
+    active_joint_mask[model->getDofIndex("RShYaw")] = false;
+    active_joint_mask[model->getDofIndex("RElbj")] = false;
+    active_joint_mask[model->getDofIndex("RForearmPlate")] = false;
+    active_joint_mask[model->getDofIndex("RWrj1")] = false;
+    active_joint_mask[model->getDofIndex("RWrj2")] = false;
+    
+    active_joint_mask[model->getDofIndex("LShSag")] = false;
+    active_joint_mask[model->getDofIndex("LShLat")] = false;
+    active_joint_mask[model->getDofIndex("LShYaw")] = false;
+    active_joint_mask[model->getDofIndex("LElbj")] = false;
+    active_joint_mask[model->getDofIndex("LForearmPlate")] = false;
+    active_joint_mask[model->getDofIndex("LWrj1")] = false;
+    active_joint_mask[model->getDofIndex("LWrj2")] = false;
+
+    com->setActiveJointsMask(active_joint_mask);*/
+    
+
     waist.reset(new Cartesian("waist", q, *model, "Waist", "world"));
     waist->setLambda(lambda);
     std::list<unsigned int> idx = {3,4,5};
